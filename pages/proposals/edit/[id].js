@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks } from 'lucide-react';
+import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function ProposalEditorPage() {
@@ -30,6 +30,7 @@ export default function ProposalEditorPage() {
   const [proposal, setProposal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isCreatingProposal, setIsCreatingProposal] = useState(false);
 
   // Editor state
   const [content, setContent] = useState('');
@@ -87,6 +88,43 @@ export default function ProposalEditorPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Create a new proposal for the first available tender
+  const handleCreateProposal = async () => {
+    try {
+      setIsCreatingProposal(true);
+      
+      // Get the first available tender
+      const tenders = await api('/api/tenders');
+      if (!tenders || tenders.length === 0) {
+        addToast('No tenders available to create a proposal for', 'error');
+        return;
+      }
+
+      const firstTender = tenders[0];
+      
+      // Generate a proposal for the first tender
+      const result = await api('/api/generateProposal', {
+        method: 'POST',
+        body: { tenderId: firstTender.id }
+      });
+
+      // Redirect to the new proposal editor
+      router.push(`/proposals/edit/${result.proposalId}`);
+      addToast('New proposal created successfully!', 'success');
+    } catch (error) {
+      console.error('Error creating proposal:', error);
+      addToast('Failed to create proposal', 'error');
+    } finally {
+      setIsCreatingProposal(false);
+    }
+  };
+
+  // Retry loading the proposal
+  const handleRetryLoad = () => {
+    setError(null);
+    loadProposal();
   };
 
   // Autosave functionality
@@ -324,8 +362,46 @@ export default function ProposalEditorPage() {
               </div>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left max-w-md mx-auto">
-                <h4 className="text-sm font-medium text-blue-900 mb-2">How to create a proposal:</h4>
-                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">Quick Solutions:</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-blue-800">Create a new proposal</span>
+                    <Button 
+                      size="sm" 
+                      onClick={handleCreateProposal}
+                      disabled={isCreatingProposal}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isCreatingProposal ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3 h-3 mr-1" />
+                          Create
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-blue-800">Try loading again</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={handleRetryLoad}
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Retry
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left max-w-md mx-auto">
+                <h4 className="text-sm font-medium text-amber-900 mb-2">Alternative: Create from tender</h4>
+                <ol className="text-sm text-amber-800 space-y-1 list-decimal list-inside">
                   <li>Browse available tenders</li>
                   <li>Click on a tender to view details</li>
                   <li>Use the "Generate Proposal" button</li>
