@@ -1,18 +1,15 @@
 // pages/tenders/index.js
-// Updated tenders listing page with authentication redirection
-// Ensures unauthenticated users are redirected to login page
+// Updated tenders listing page with new modern design
+// Converted from React Router to Next.js routing
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher } from '../../lib/api';
-import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import LoadingSpinner from '../../components/LoadingSpinner';
 import { 
   Search, 
   Filter, 
@@ -25,18 +22,9 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 
 export default function TenderFeed() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
 
   // Fetch tenders data from API
   const { data: tenders, error, isLoading } = useSWR('/api/tenders', fetcher);
@@ -73,20 +61,6 @@ export default function TenderFeed() {
   const getDaysUntilClosing = (closingDate) => {
     return formatDistanceToNow(new Date(closingDate), { addSuffix: true });
   };
-
-  // Show loading state while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="large" message="Loading..." />
-      </div>
-    );
-  }
-
-  // Don't render if user is not authenticated (will redirect)
-  if (!user) {
-    return null;
-  }
 
   // Error state
   if (error) {
@@ -220,7 +194,6 @@ export default function TenderFeed() {
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge variant="outline">{tender.category}</Badge>
                   {tender.isNew && <Badge variant="outline">Featured</Badge>}
-                  }
                 </div>
 
                 {/* Tender Details */}
