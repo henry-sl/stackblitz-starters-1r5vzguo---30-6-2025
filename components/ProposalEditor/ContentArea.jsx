@@ -1,6 +1,6 @@
 // components/ProposalEditor/ContentArea.jsx
 // Main content editing area for proposals with rich text capabilities
-// Handles text input, formatting, and content management
+// Handles text input, formatting, and content management with resizable and full-screen support
 
 import React, { useRef, useEffect } from 'react';
 
@@ -9,7 +9,8 @@ export default function ContentArea({
   onChange, 
   onSelectionChange,
   readOnly = false,
-  placeholder = "Start writing your proposal..."
+  placeholder = "Start writing your proposal...",
+  isFullScreen = false
 }) {
   const editorRef = useRef(null);
 
@@ -62,9 +63,9 @@ export default function ContentArea({
   };
 
   return (
-    <div className="flex flex-col">
+    <div className={`flex flex-col ${isFullScreen ? 'flex-1 h-full' : ''}`}>
       {/* Editor Area */}
-      <div className="relative">
+      <div className={`relative ${isFullScreen ? 'flex-1' : ''}`}>
         <textarea
           ref={editorRef}
           value={content}
@@ -73,8 +74,12 @@ export default function ContentArea({
           onKeyDown={handleKeyDown}
           readOnly={readOnly}
           placeholder={placeholder}
-          className={`w-full min-h-[500px] max-h-[700px] p-6 border-0 resize-none focus:outline-none text-gray-900 leading-relaxed ${
+          className={`w-full p-6 border-0 focus:outline-none text-gray-900 leading-relaxed resize-y ${
             readOnly ? 'bg-gray-50 cursor-default' : 'bg-white'
+          } ${
+            isFullScreen 
+              ? 'h-full min-h-full' 
+              : 'min-h-[500px] max-h-[800px]'
           }`}
           style={{ 
             fontSize: '16px',

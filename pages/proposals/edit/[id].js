@@ -1,6 +1,6 @@
 // pages/proposals/edit/[id].js
 // Enhanced proposal editor page with comprehensive editor functionality
-// Provides rich text editing, autosave, and export capabilities
+// Provides rich text editing, autosave, export capabilities, and full-screen mode
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function ProposalEditorPage() {
@@ -39,6 +39,7 @@ export default function ProposalEditorPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGeneratingImprovement, setIsGeneratingImprovement] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -282,6 +283,11 @@ export default function ProposalEditorPage() {
     }
   };
 
+  // Toggle full screen mode
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -289,11 +295,20 @@ export default function ProposalEditorPage() {
         e.preventDefault();
         handleManualSave();
       }
+      // F11 or Ctrl+Shift+F for full screen
+      if (e.key === 'F11' || (e.ctrlKey && e.shiftKey && e.key === 'F')) {
+        e.preventDefault();
+        toggleFullScreen();
+      }
+      // Escape to exit full screen
+      if (e.key === 'Escape' && isFullScreen) {
+        setIsFullScreen(false);
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isFullScreen]);
 
   // Warn about unsaved changes
   useEffect(() => {
@@ -432,38 +447,52 @@ export default function ProposalEditorPage() {
   const isSubmitted = proposal?.status === 'submitted';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <Link href="/tenders" className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Tender Details</span>
-        </Link>
-        
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Proposal Editor</h1>
-            <p className="text-gray-600">{proposal?.tenderTitle}</p>
-          </div>
+    <div className={`${
+      isFullScreen 
+        ? 'fixed inset-0 z-[9999] bg-white overflow-auto p-0' 
+        : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'
+    }`}>
+      {/* Header - hidden in full screen */}
+      {!isFullScreen && (
+        <div className="mb-6">
+          <Link href="/tenders" className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Tender Details</span>
+          </Link>
           
-          <div className="flex items-center space-x-3">
-            {lastSaved && (
-              <span className="text-sm text-gray-500 flex items-center space-x-1">
-                <Clock className="w-4 h-4" />
-                <span>Saved {format(new Date(lastSaved), "HH:mm")}</span>
-              </span>
-            )}
-            <Button variant="outline" onClick={handleManualSave}>
-              Save Draft
-            </Button>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Proposal Editor</h1>
+              <p className="text-gray-600">{proposal?.tenderTitle}</p>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {lastSaved && (
+                <span className="text-sm text-gray-500 flex items-center space-x-1">
+                  <Clock className="w-4 h-4" />
+                  <span>Saved {format(new Date(lastSaved), "HH:mm")}</span>
+                </span>
+              )}
+              <Button variant="outline" onClick={handleManualSave}>
+                Save Draft
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className={`${
+        isFullScreen 
+          ? 'grid grid-cols-1 gap-0 h-full' 
+          : 'grid grid-cols-1 lg:grid-cols-4 gap-8'
+      }`}>
         {/* Main Editor */}
-        <div className="lg:col-span-3">
-          <Card>
+        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-3'}>
+          <Card className={`${
+            isFullScreen 
+              ? 'h-full border-0 shadow-none rounded-none' 
+              : ''
+          }`}>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle>Proposal Content</CardTitle>
@@ -482,10 +511,24 @@ export default function ProposalEditorPage() {
                     <History className="w-4 h-4 mr-2" />
                     Versions
                   </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={toggleFullScreen}
+                    title={isFullScreen ? 'Exit Full Screen (Esc)' : 'Full Screen (F11)'}
+                  >
+                    {isFullScreen ? (
+                      <Minimize className="w-4 h-4" />
+                    ) : (
+                      <Maximize className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className={`${
+              isFullScreen ? 'flex flex-col flex-1 p-0' : 'p-0'
+            }`}>
               {!isSubmitted && (
                 <ToolbarSection onFormat={handleFormat} disabled={isSubmitted} />
               )}
@@ -494,170 +537,173 @@ export default function ProposalEditorPage() {
                 onChange={handleContentChange}
                 readOnly={isSubmitted}
                 placeholder="Start writing your proposal..."
+                isFullScreen={isFullScreen}
               />
             </CardContent>
           </Card>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Insert */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Building2 className="w-5 h-5" />
-                <span>Quick Insert</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => insertCompanyInfo('background')}
-                disabled={isSubmitted}
-              >
-                Company Background
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => insertCompanyInfo('certifications')}
-                disabled={isSubmitted}
-              >
-                Certifications
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => insertCompanyInfo('experience')}
-                disabled={isSubmitted}
-              >
-                Past Experience
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Sidebar - hidden in full screen */}
+        {!isFullScreen && (
+          <div className="space-y-6">
+            {/* Quick Insert */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building2 className="w-5 h-5" />
+                  <span>Quick Insert</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => insertCompanyInfo('background')}
+                  disabled={isSubmitted}
+                >
+                  Company Background
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => insertCompanyInfo('certifications')}
+                  disabled={isSubmitted}
+                >
+                  Certifications
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => insertCompanyInfo('experience')}
+                  disabled={isSubmitted}
+                >
+                  Past Experience
+                </Button>
+              </CardContent>
+            </Card>
 
-          {/* Version History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <History className="w-5 h-5" />
-                <span>Version History</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {versions && versions.length > 0 ? (
-                  versions.map((version) => (
-                    <div key={version.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
-                      <div>
-                        <p className="text-sm font-medium">{version.label || `Version ${version.version}`}</p>
-                        <p className="text-xs text-gray-500">{format(new Date(version.createdAt), "MMM d, HH:mm")}</p>
+            {/* Version History */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <History className="w-5 h-5" />
+                  <span>Version History</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {versions && versions.length > 0 ? (
+                    versions.map((version) => (
+                      <div key={version.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
+                        <div>
+                          <p className="text-sm font-medium">{version.label || `Version ${version.version}`}</p>
+                          <p className="text-xs text-gray-500">{format(new Date(version.createdAt), "MMM d, HH:mm")}</p>
+                        </div>
+                        <Button variant="ghost" size="sm">
+                          View
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500">No versions yet</p>
                     </div>
-                  ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Submit Proposal */}
+            <Card className="border-green-200 bg-green-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-green-900">
+                  <Shield className="w-5 h-5" />
+                  <span>Submit Proposal</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-2 text-sm">
+                    <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
+                    <p className="text-gray-700">
+                      Submitting will record your proposal on the Algorand blockchain and lock further edits.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Proposal content ready</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Company profile complete</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>All requirements met</span>
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    onClick={handleSubmitProposal}
+                    disabled={isSubmitting || isSubmitted || !content.trim()}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Submitting to Blockchain...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit Proposal
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tender Reference */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Tender Reference</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {tender ? (
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Budget:</span>
+                      <p className="font-semibold">RM 2,500,000</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Closing:</span>
+                      <p className="font-semibold">Feb 15, 2025</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Category:</span>
+                      <p className="font-semibold">{tender.category}</p>
+                    </div>
+                    <Link href={`/tenders/${tender.id}`} className="block mt-3">
+                      <Button variant="outline" size="sm" className="w-full">
+                        View Full Tender
+                      </Button>
+                    </Link>
+                  </div>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="text-sm text-gray-500">No versions yet</p>
+                    <p className="text-sm text-gray-500">Loading tender details...</p>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Submit Proposal */}
-          <Card className="border-green-200 bg-green-50/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-green-900">
-                <Shield className="w-5 h-5" />
-                <span>Submit Proposal</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-2 text-sm">
-                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
-                  <p className="text-gray-700">
-                    Submitting will record your proposal on the Algorand blockchain and lock further edits.
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Proposal content ready</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Company profile complete</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>All requirements met</span>
-                  </div>
-                </div>
-
-                <Button 
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  onClick={handleSubmitProposal}
-                  disabled={isSubmitting || isSubmitted || !content.trim()}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Submitting to Blockchain...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Submit Proposal
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tender Reference */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tender Reference</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tender ? (
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-gray-500">Budget:</span>
-                    <p className="font-semibold">RM 2,500,000</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Closing:</span>
-                    <p className="font-semibold">Feb 15, 2025</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Category:</span>
-                    <p className="font-semibold">{tender.category}</p>
-                  </div>
-                  <Link href={`/tenders/${tender.id}`} className="block mt-3">
-                    <Button variant="outline" size="sm" className="w-full">
-                      View Full Tender
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500">Loading tender details...</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
