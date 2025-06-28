@@ -4,6 +4,20 @@
 
 import { supabase } from '../../lib/supabaseClient';
 
+// Helper function to safely parse JSON with fallback
+function safeJsonParse(jsonString, fallback = []) {
+  if (!jsonString) return fallback;
+  if (typeof jsonString !== 'string') return fallback;
+  
+  try {
+    const parsed = JSON.parse(jsonString);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch (error) {
+    console.warn('Failed to parse JSON:', jsonString, error);
+    return fallback;
+  }
+}
+
 export default async function handler(req, res) {
   // GET request - retrieve company profile
   if (req.method === 'GET') {
@@ -17,6 +31,7 @@ export default async function handler(req, res) {
       // Get user from token
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       if (authError || !user) {
+        console.error('Auth error:', authError);
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
 
@@ -56,8 +71,8 @@ export default async function handler(req, res) {
           yearsInOperation: profile.years_in_operation || '',
           totalProjects: profile.total_projects || '',
           totalValue: profile.total_value || '',
-          specialties: profile.specialties ? JSON.parse(profile.specialties) : [],
-          majorProjects: profile.major_projects ? JSON.parse(profile.major_projects) : []
+          specialties: safeJsonParse(profile.specialties, []),
+          majorProjects: safeJsonParse(profile.major_projects, [])
         },
         team: {
           totalEmployees: profile.total_employees || '',
@@ -65,11 +80,11 @@ export default async function handler(req, res) {
           supervisors: profile.supervisors || '',
           technicians: profile.technicians || '',
           laborers: profile.laborers || '',
-          keyPersonnel: profile.key_personnel ? JSON.parse(profile.key_personnel) : []
+          keyPersonnel: safeJsonParse(profile.key_personnel, [])
         },
         preferences: {
-          categories: profile.categories ? JSON.parse(profile.categories) : [],
-          locations: profile.locations ? JSON.parse(profile.locations) : [],
+          categories: safeJsonParse(profile.categories, []),
+          locations: safeJsonParse(profile.locations, []),
           budgetRange: profile.budget_range || ''
         }
       } : {
@@ -132,6 +147,7 @@ export default async function handler(req, res) {
       // Get user from token
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       if (authError || !user) {
+        console.error('Auth error:', authError);
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
 
