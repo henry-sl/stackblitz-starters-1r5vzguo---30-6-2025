@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, KeyboardEvent, ChangeEvent } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -10,7 +10,7 @@ import { api } from '../lib/api';
 import { 
   Building2, 
   Save, 
-  Upload, 
+  X,
   CheckCircle, 
   AlertCircle,
   Users,
@@ -18,11 +18,78 @@ import {
   MapPin,
   Phone,
   Mail,
-  FileText
+  FileText,
+  Plus
 } from "lucide-react";
 
-// Mock company profile data structure
-const defaultProfile = {
+// TypeScript interfaces for profile data structure
+interface BasicInfo {
+  companyName: string;
+  registrationNumber: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  establishedYear: string;
+}
+
+interface Certifications {
+  cidbGrade: string;
+  cidbExpiry: string;
+  iso9001: boolean;
+  iso14001: boolean;
+  ohsas18001: boolean;
+  contractorLicense: string;
+  licenseExpiry: string;
+}
+
+interface MajorProject {
+  name: string;
+  year: string;
+  value: string;
+  client: string;
+}
+
+interface Experience {
+  yearsInOperation: string;
+  totalProjects: string;
+  totalValue: string;
+  specialties: string[];
+  majorProjects: MajorProject[];
+}
+
+interface KeyPersonnel {
+  name: string;
+  position: string;
+  experience: string;
+  certifications: string[];
+}
+
+interface Team {
+  totalEmployees: string;
+  engineers: string;
+  supervisors: string;
+  technicians: string;
+  laborers: string;
+  keyPersonnel: KeyPersonnel[];
+}
+
+interface Preferences {
+  categories: string[];
+  locations: string[];
+  budgetRange: string;
+}
+
+interface Profile {
+  basicInfo: BasicInfo;
+  certifications: Certifications;
+  experience: Experience;
+  team: Team;
+  preferences: Preferences;
+}
+
+// Default empty profile
+const defaultProfile: Profile = {
   basicInfo: {
     companyName: "",
     registrationNumber: "",
@@ -63,28 +130,34 @@ const defaultProfile = {
   }
 };
 
-export default function CompanyProfile() {
+export default function CompanyProfile(): JSX.Element {
   const { user } = useAuth();
   const { addToast } = useToast();
-  const [profile, setProfile] = useState(defaultProfile);
+  const [profile, setProfile] = useState<Profile>(defaultProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // For adding new items
+  const [newSpecialty, setNewSpecialty] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [newLocation, setNewLocation] = useState("");
+  const [newCertification, setNewCertification] = useState("");
+  const [personnelIndex, setPersonnelIndex] = useState(-1);
 
   // Load existing company data when component mounts
   useEffect(() => {
-    if (user) {
-      loadCompanyData();
-    }
-  }, [user]);
+    loadCompanyData();
+  }, []);
 
   // Function to fetch company profile data from existing API
   const loadCompanyData = async () => {
     try {
+      setLoading(true);
       const data = await api('/api/company');
       
       // Transform flat API data to nested profile structure
-      const transformedProfile = {
+      const transformedProfile: Profile = {
         basicInfo: {
           companyName: data.name || "",
           registrationNumber: data.registrationNumber || "",
@@ -108,7 +181,7 @@ export default function CompanyProfile() {
           totalProjects: data.totalProjects || "",
           totalValue: data.totalValue || "",
           specialties: Array.isArray(data.certifications) ? data.certifications : [],
-          majorProjects: data.majorProjects || []
+          majorProjects: Array.isArray(data.majorProjects) ? data.majorProjects : []
         },
         team: {
           totalEmployees: data.totalEmployees || "",
@@ -116,11 +189,11 @@ export default function CompanyProfile() {
           supervisors: data.supervisors || "",
           technicians: data.technicians || "",
           laborers: data.laborers || "",
-          keyPersonnel: data.keyPersonnel || []
+          keyPersonnel: Array.isArray(data.keyPersonnel) ? data.keyPersonnel : []
         },
         preferences: {
-          categories: data.categories || [],
-          locations: data.locations || [],
+          categories: Array.isArray(data.categories) ? data.categories : [],
+          locations: Array.isArray(data.locations) ? data.locations : [],
           budgetRange: data.budgetRange || ""
         }
       };
@@ -129,6 +202,80 @@ export default function CompanyProfile() {
     } catch (error) {
       // Company profile might not exist yet, use defaults
       console.log('No existing profile found, using defaults');
+      
+      // Set mock data for development
+      setProfile({
+        basicInfo: {
+          companyName: "Pembinaan Jaya Sdn Bhd",
+          registrationNumber: "123456-A",
+          address: "No. 123, Jalan Industri 2, Taman Perindustrian, 47100 Puchong, Selangor",
+          phone: "+603-8051-2345",
+          email: "info@pembinaan-jaya.com.my",
+          website: "www.pembinaan-jaya.com.my",
+          establishedYear: "2016"
+        },
+        certifications: {
+          cidbGrade: "G5",
+          cidbExpiry: "2026-12-31",
+          iso9001: true,
+          iso14001: false,
+          ohsas18001: true,
+          contractorLicense: "KL-2024-001234",
+          licenseExpiry: "2026-06-30"
+        },
+        experience: {
+          yearsInOperation: "8",
+          totalProjects: "52",
+          totalValue: "RM 15,200,000",
+          specialties: ["Road Construction", "Infrastructure", "Maintenance", "Drainage Works"],
+          majorProjects: [
+            {
+              name: "Federal Highway Maintenance Phase 2",
+              year: "2023",
+              value: "RM 1,200,000",
+              client: "Malaysian Highway Authority"
+            },
+            {
+              name: "Shah Alam Industrial Road Repairs",
+              year: "2022",
+              value: "RM 800,000",
+              client: "Selangor State Government"
+            },
+            {
+              name: "Klang Valley Drainage Improvement",
+              year: "2021",
+              value: "RM 950,000",
+              client: "Department of Irrigation and Drainage"
+            }
+          ]
+        },
+        team: {
+          totalEmployees: "25",
+          engineers: "3",
+          supervisors: "5",
+          technicians: "12",
+          laborers: "5",
+          keyPersonnel: [
+            {
+              name: "Eng. Ahmad Hassan",
+              position: "Project Manager",
+              experience: "15 years",
+              certifications: ["Professional Engineer", "Project Management"]
+            },
+            {
+              name: "Encik Rahman Ali",
+              position: "Site Supervisor",
+              experience: "12 years",
+              certifications: ["CIDB Certified", "Safety Officer"]
+            }
+          ]
+        },
+        preferences: {
+          categories: ["Construction", "Infrastructure", "Maintenance"],
+          locations: ["Kuala Lumpur", "Selangor", "Putrajaya"],
+          budgetRange: "RM 500,000 - RM 5,000,000"
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -229,19 +376,28 @@ export default function CompanyProfile() {
     return Math.round((completed / total) * 100);
   };
 
-  const addSpecialty = (specialty) => {
-    if (specialty.trim() && !profile.experience.specialties.includes(specialty.trim())) {
+  // Specialty management
+  const addSpecialty = () => {
+    if (newSpecialty.trim() && !profile.experience.specialties.includes(newSpecialty.trim())) {
       setProfile({
         ...profile,
         experience: {
           ...profile.experience,
-          specialties: [...profile.experience.specialties, specialty.trim()]
+          specialties: [...profile.experience.specialties, newSpecialty.trim()]
         }
       });
+      setNewSpecialty("");
     }
   };
 
-  const removeSpecialty = (index) => {
+  const handleSpecialtyKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSpecialty();
+    }
+  };
+
+  const removeSpecialty = (index: number) => {
     setProfile({
       ...profile,
       experience: {
@@ -251,8 +407,9 @@ export default function CompanyProfile() {
     });
   };
 
+  // Project management
   const addProject = () => {
-    const newProject = {
+    const newProject: MajorProject = {
       name: "",
       year: "",
       value: "",
@@ -267,7 +424,7 @@ export default function CompanyProfile() {
     });
   };
 
-  const updateProject = (index, field, value) => {
+  const updateProject = (index: number, field: keyof MajorProject, value: string) => {
     const updatedProjects = [...profile.experience.majorProjects];
     updatedProjects[index] = { ...updatedProjects[index], [field]: value };
     setProfile({
@@ -279,7 +436,7 @@ export default function CompanyProfile() {
     });
   };
 
-  const removeProject = (index) => {
+  const removeProject = (index: number) => {
     setProfile({
       ...profile,
       experience: {
@@ -289,8 +446,9 @@ export default function CompanyProfile() {
     });
   };
 
+  // Personnel management
   const addPersonnel = () => {
-    const newPerson = {
+    const newPerson: KeyPersonnel = {
       name: "",
       position: "",
       experience: "",
@@ -305,7 +463,7 @@ export default function CompanyProfile() {
     });
   };
 
-  const updatePersonnel = (index, field, value) => {
+  const updatePersonnel = (index: number, field: keyof KeyPersonnel, value: string | string[]) => {
     const updatedPersonnel = [...profile.team.keyPersonnel];
     updatedPersonnel[index] = { ...updatedPersonnel[index], [field]: value };
     setProfile({
@@ -317,12 +475,108 @@ export default function CompanyProfile() {
     });
   };
 
-  const removePersonnel = (index) => {
+  const removePersonnel = (index: number) => {
     setProfile({
       ...profile,
       team: {
         ...profile.team,
         keyPersonnel: profile.team.keyPersonnel.filter((_, i) => i !== index)
+      }
+    });
+  };
+
+  const addPersonnelCertification = (index: number) => {
+    if (newCertification.trim()) {
+      const updatedPersonnel = [...profile.team.keyPersonnel];
+      updatedPersonnel[index] = { 
+        ...updatedPersonnel[index], 
+        certifications: [...updatedPersonnel[index].certifications, newCertification.trim()]
+      };
+      setProfile({
+        ...profile,
+        team: {
+          ...profile.team,
+          keyPersonnel: updatedPersonnel
+        }
+      });
+      setNewCertification("");
+      setPersonnelIndex(-1);
+    }
+  };
+
+  const removePersonnelCertification = (personnelIndex: number, certIndex: number) => {
+    const updatedPersonnel = [...profile.team.keyPersonnel];
+    updatedPersonnel[personnelIndex] = { 
+      ...updatedPersonnel[personnelIndex], 
+      certifications: updatedPersonnel[personnelIndex].certifications.filter((_, i) => i !== certIndex)
+    };
+    setProfile({
+      ...profile,
+      team: {
+        ...profile.team,
+        keyPersonnel: updatedPersonnel
+      }
+    });
+  };
+
+  // Category management
+  const addCategory = () => {
+    if (newCategory.trim() && !profile.preferences.categories.includes(newCategory.trim())) {
+      setProfile({
+        ...profile,
+        preferences: {
+          ...profile.preferences,
+          categories: [...profile.preferences.categories, newCategory.trim()]
+        }
+      });
+      setNewCategory("");
+    }
+  };
+
+  const handleCategoryKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCategory();
+    }
+  };
+
+  const removeCategory = (index: number) => {
+    setProfile({
+      ...profile,
+      preferences: {
+        ...profile.preferences,
+        categories: profile.preferences.categories.filter((_, i) => i !== index)
+      }
+    });
+  };
+
+  // Location management
+  const addLocation = () => {
+    if (newLocation.trim() && !profile.preferences.locations.includes(newLocation.trim())) {
+      setProfile({
+        ...profile,
+        preferences: {
+          ...profile.preferences,
+          locations: [...profile.preferences.locations, newLocation.trim()]
+        }
+      });
+      setNewLocation("");
+    }
+  };
+
+  const handleLocationKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addLocation();
+    }
+  };
+
+  const removeLocation = (index: number) => {
+    setProfile({
+      ...profile,
+      preferences: {
+        ...profile.preferences,
+        locations: profile.preferences.locations.filter((_, i) => i !== index)
       }
     });
   };
@@ -437,7 +691,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.basicInfo.companyName}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       basicInfo: { ...profile.basicInfo, companyName: e.target.value }
                     })}
@@ -451,7 +705,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.basicInfo.registrationNumber}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       basicInfo: { ...profile.basicInfo, registrationNumber: e.target.value }
                     })}
@@ -465,7 +719,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.basicInfo.address}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       basicInfo: { ...profile.basicInfo, address: e.target.value }
                     })}
@@ -479,7 +733,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.basicInfo.phone}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       basicInfo: { ...profile.basicInfo, phone: e.target.value }
                     })}
@@ -494,7 +748,7 @@ export default function CompanyProfile() {
                     type="email"
                     value={profile.basicInfo.email}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       basicInfo: { ...profile.basicInfo, email: e.target.value }
                     })}
@@ -508,7 +762,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.basicInfo.website}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       basicInfo: { ...profile.basicInfo, website: e.target.value }
                     })}
@@ -522,7 +776,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.basicInfo.establishedYear}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       basicInfo: { ...profile.basicInfo, establishedYear: e.target.value }
                     })}
@@ -551,7 +805,7 @@ export default function CompanyProfile() {
                   <select
                     value={profile.certifications.cidbGrade}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setProfile({
                       ...profile,
                       certifications: { ...profile.certifications, cidbGrade: e.target.value }
                     })}
@@ -576,7 +830,7 @@ export default function CompanyProfile() {
                     type="date"
                     value={profile.certifications.cidbExpiry}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       certifications: { ...profile.certifications, cidbExpiry: e.target.value }
                     })}
@@ -590,7 +844,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.certifications.contractorLicense}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       certifications: { ...profile.certifications, contractorLicense: e.target.value }
                     })}
@@ -605,7 +859,7 @@ export default function CompanyProfile() {
                     type="date"
                     value={profile.certifications.licenseExpiry}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       certifications: { ...profile.certifications, licenseExpiry: e.target.value }
                     })}
@@ -622,7 +876,7 @@ export default function CompanyProfile() {
                         type="checkbox"
                         checked={profile.certifications.iso9001}
                         disabled={!isEditing}
-                        onChange={(e) => setProfile({
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                           ...profile,
                           certifications: { ...profile.certifications, iso9001: e.target.checked }
                         })}
@@ -636,7 +890,7 @@ export default function CompanyProfile() {
                         type="checkbox"
                         checked={profile.certifications.iso14001}
                         disabled={!isEditing}
-                        onChange={(e) => setProfile({
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                           ...profile,
                           certifications: { ...profile.certifications, iso14001: e.target.checked }
                         })}
@@ -650,7 +904,7 @@ export default function CompanyProfile() {
                         type="checkbox"
                         checked={profile.certifications.ohsas18001}
                         disabled={!isEditing}
-                        onChange={(e) => setProfile({
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                           ...profile,
                           certifications: { ...profile.certifications, ohsas18001: e.target.checked }
                         })}
@@ -685,7 +939,7 @@ export default function CompanyProfile() {
                     <Input
                       value={profile.experience.yearsInOperation}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         experience: { ...profile.experience, yearsInOperation: e.target.value }
                       })}
@@ -698,7 +952,7 @@ export default function CompanyProfile() {
                     <Input
                       value={profile.experience.totalProjects}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         experience: { ...profile.experience, totalProjects: e.target.value }
                       })}
@@ -711,7 +965,7 @@ export default function CompanyProfile() {
                     <Input
                       value={profile.experience.totalValue}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         experience: { ...profile.experience, totalValue: e.target.value }
                       })}
@@ -730,24 +984,32 @@ export default function CompanyProfile() {
                         {isEditing && (
                           <button
                             onClick={() => removeSpecialty(index)}
-                            className="ml-1 text-red-500 hover:text-red-700"
+                            className="ml-1 text-gray-500 hover:text-red-500"
+                            aria-label={`Remove ${specialty}`}
                           >
-                            ×
+                            <X className="h-3 w-3" />
                           </button>
                         )}
                       </Badge>
                     ))}
                   </div>
                   {isEditing && (
-                    <Input 
-                      placeholder="Add specialty (press Enter)" 
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          addSpecialty(e.target.value);
-                          e.target.value = '';
-                        }
-                      }}
-                    />
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="Add specialty" 
+                        value={newSpecialty}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setNewSpecialty(e.target.value)}
+                        onKeyPress={handleSpecialtyKeyPress}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={addSpecialty}
+                        disabled={!newSpecialty.trim()}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -769,7 +1031,7 @@ export default function CompanyProfile() {
                           <Input
                             value={project.name}
                             disabled={!isEditing}
-                            onChange={(e) => updateProject(index, 'name', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateProject(index, 'name', e.target.value)}
                           />
                         </div>
                         <div>
@@ -779,7 +1041,7 @@ export default function CompanyProfile() {
                           <Input
                             value={project.year}
                             disabled={!isEditing}
-                            onChange={(e) => updateProject(index, 'year', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateProject(index, 'year', e.target.value)}
                           />
                         </div>
                         <div>
@@ -789,7 +1051,7 @@ export default function CompanyProfile() {
                           <Input
                             value={project.value}
                             disabled={!isEditing}
-                            onChange={(e) => updateProject(index, 'value', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateProject(index, 'value', e.target.value)}
                           />
                         </div>
                         <div className="md:col-span-3">
@@ -799,7 +1061,7 @@ export default function CompanyProfile() {
                           <Input
                             value={project.client}
                             disabled={!isEditing}
-                            onChange={(e) => updateProject(index, 'client', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateProject(index, 'client', e.target.value)}
                           />
                         </div>
                         {isEditing && (
@@ -810,6 +1072,7 @@ export default function CompanyProfile() {
                               onClick={() => removeProject(index)}
                               className="text-red-600 hover:text-red-700"
                             >
+                              <X className="h-4 w-4 mr-1" />
                               Remove
                             </Button>
                           </div>
@@ -820,6 +1083,7 @@ export default function CompanyProfile() {
                 </div>
                 {isEditing && (
                   <Button variant="outline" className="mt-4" onClick={addProject}>
+                    <Plus className="h-4 w-4 mr-1" />
                     Add Project
                   </Button>
                 )}
@@ -845,7 +1109,7 @@ export default function CompanyProfile() {
                   {isEditing && (
                     <Input
                       value={profile.team.totalEmployees}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         team: { ...profile.team, totalEmployees: e.target.value }
                       })}
@@ -860,7 +1124,7 @@ export default function CompanyProfile() {
                   {isEditing && (
                     <Input
                       value={profile.team.engineers}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         team: { ...profile.team, engineers: e.target.value }
                       })}
@@ -875,7 +1139,7 @@ export default function CompanyProfile() {
                   {isEditing && (
                     <Input
                       value={profile.team.supervisors}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         team: { ...profile.team, supervisors: e.target.value }
                       })}
@@ -890,7 +1154,7 @@ export default function CompanyProfile() {
                   {isEditing && (
                     <Input
                       value={profile.team.technicians}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         team: { ...profile.team, technicians: e.target.value }
                       })}
@@ -905,7 +1169,7 @@ export default function CompanyProfile() {
                   {isEditing && (
                     <Input
                       value={profile.team.laborers}
-                      onChange={(e) => setProfile({
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                         ...profile,
                         team: { ...profile.team, laborers: e.target.value }
                       })}
@@ -929,7 +1193,7 @@ export default function CompanyProfile() {
                           <Input
                             value={person.name}
                             disabled={!isEditing}
-                            onChange={(e) => updatePersonnel(index, 'name', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updatePersonnel(index, 'name', e.target.value)}
                           />
                         </div>
                         <div>
@@ -939,7 +1203,7 @@ export default function CompanyProfile() {
                           <Input
                             value={person.position}
                             disabled={!isEditing}
-                            onChange={(e) => updatePersonnel(index, 'position', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updatePersonnel(index, 'position', e.target.value)}
                           />
                         </div>
                         <div>
@@ -949,7 +1213,7 @@ export default function CompanyProfile() {
                           <Input
                             value={person.experience}
                             disabled={!isEditing}
-                            onChange={(e) => updatePersonnel(index, 'experience', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updatePersonnel(index, 'experience', e.target.value)}
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -958,11 +1222,46 @@ export default function CompanyProfile() {
                           </label>
                           <div className="flex flex-wrap gap-2">
                             {person.certifications && person.certifications.map((cert, certIndex) => (
-                              <Badge key={certIndex} variant="outline">
+                              <Badge key={certIndex} variant="outline" className="flex items-center">
                                 {cert}
+                                {isEditing && (
+                                  <button
+                                    onClick={() => removePersonnelCertification(index, certIndex)}
+                                    className="ml-1 text-gray-500 hover:text-red-500"
+                                    aria-label={`Remove ${cert}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
                               </Badge>
                             ))}
                           </div>
+                          {isEditing && (
+                            <div className="flex gap-2 mt-2">
+                              <Input 
+                                placeholder="Add certification" 
+                                value={personnelIndex === index ? newCertification : ""}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                  setNewCertification(e.target.value);
+                                  setPersonnelIndex(index);
+                                }}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && personnelIndex === index) {
+                                    e.preventDefault();
+                                    addPersonnelCertification(index);
+                                  }
+                                }}
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => addPersonnelCertification(index)}
+                                disabled={!newCertification.trim() || personnelIndex !== index}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         {isEditing && (
                           <div className="md:col-span-1 flex items-end">
@@ -972,6 +1271,7 @@ export default function CompanyProfile() {
                               onClick={() => removePersonnel(index)}
                               className="text-red-600 hover:text-red-700"
                             >
+                              <X className="h-4 w-4 mr-1" />
                               Remove
                             </Button>
                           </div>
@@ -982,6 +1282,7 @@ export default function CompanyProfile() {
                 </div>
                 {isEditing && (
                   <Button variant="outline" className="mt-4" onClick={addPersonnel}>
+                    <Plus className="h-4 w-4 mr-1" />
                     Add Personnel
                   </Button>
                 )}
@@ -1004,13 +1305,37 @@ export default function CompanyProfile() {
                   </label>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {profile.preferences.categories.map((category, index) => (
-                      <Badge key={index} className="bg-blue-100 text-blue-800">
+                      <Badge key={index} className="bg-blue-100 text-blue-800 flex items-center">
                         {category}
+                        {isEditing && (
+                          <button
+                            onClick={() => removeCategory(index)}
+                            className="ml-1 text-blue-500 hover:text-red-500"
+                            aria-label={`Remove ${category}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </Badge>
                     ))}
                   </div>
                   {isEditing && (
-                    <Input placeholder="Add category" />
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="Add category" 
+                        value={newCategory}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setNewCategory(e.target.value)}
+                        onKeyPress={handleCategoryKeyPress}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={addCategory}
+                        disabled={!newCategory.trim()}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
 
@@ -1020,13 +1345,37 @@ export default function CompanyProfile() {
                   </label>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {profile.preferences.locations.map((location, index) => (
-                      <Badge key={index} className="bg-green-100 text-green-800">
+                      <Badge key={index} className="bg-green-100 text-green-800 flex items-center">
                         {location}
+                        {isEditing && (
+                          <button
+                            onClick={() => removeLocation(index)}
+                            className="ml-1 text-green-500 hover:text-red-500"
+                            aria-label={`Remove ${location}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </Badge>
                     ))}
                   </div>
                   {isEditing && (
-                    <Input placeholder="Add location" />
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="Add location" 
+                        value={newLocation}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setNewLocation(e.target.value)}
+                        onKeyPress={handleLocationKeyPress}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={addLocation}
+                        disabled={!newLocation.trim()}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
 
@@ -1037,7 +1386,7 @@ export default function CompanyProfile() {
                   <Input
                     value={profile.preferences.budgetRange}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setProfile({
                       ...profile,
                       preferences: { ...profile.preferences, budgetRange: e.target.value }
                     })}
