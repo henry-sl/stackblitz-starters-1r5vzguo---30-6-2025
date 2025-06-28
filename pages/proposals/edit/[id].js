@@ -463,7 +463,7 @@ export default function ProposalEditorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Main Editor */}
         <div className="lg:col-span-3">
-          <Card className="h-full">
+          <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle>Proposal Content</CardTitle>
