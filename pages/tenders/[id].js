@@ -122,14 +122,20 @@ export default function TenderDetails() {
     return formatDistanceToNow(new Date(closingDate), { addSuffix: true });
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'new':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
-      case 'closing-soon':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Closing Soon</Badge>;
-      default:
-        return <Badge variant="secondary">Active</Badge>;
+  const getStatusBadge = (tender) => {
+    if (!tender) return <Badge variant="secondary">Active</Badge>;
+    
+    // Calculate days until closing
+    const daysUntilClosing = Math.ceil(
+      (new Date(tender.closingDate) - new Date()) / (1000 * 60 * 60 * 24)
+    );
+    
+    if (tender.isNew) {
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
+    } else if (daysUntilClosing <= 7) {
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Closing Soon</Badge>;
+    } else {
+      return <Badge variant="secondary">Active</Badge>;
     }
   };
 
@@ -200,10 +206,9 @@ export default function TenderDetails() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline">{tender.category}</Badge>
                     {tender.isNew && <Badge variant="outline">Featured</Badge>}
-                    }
                   </div>
                 </div>
-                {getStatusBadge(tender.isNew ? 'new' : 'active')}
+                {getStatusBadge(tender)}
               </div>
             </CardHeader>
           </Card>
