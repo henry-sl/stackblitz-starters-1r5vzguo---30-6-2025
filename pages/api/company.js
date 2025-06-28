@@ -137,6 +137,14 @@ export default async function handler(req, res) {
 
       const nestedProfile = req.body;
 
+      // Helper function to ensure array values for JSONB columns
+      const ensureArray = (value) => {
+        if (Array.isArray(value)) {
+          return value;
+        }
+        return [];
+      };
+
       // Transform nested frontend data to flat structure for Supabase
       // CRITICAL FIX: Convert empty date strings to null for proper database handling
       const flatProfile = {
@@ -164,16 +172,18 @@ export default async function handler(req, res) {
         years_in_operation: nestedProfile.experience?.yearsInOperation || '',
         total_projects: nestedProfile.experience?.totalProjects || '',
         total_value: nestedProfile.experience?.totalValue || '',
-        specialties: JSON.stringify(nestedProfile.experience?.specialties || []),
-        major_projects: JSON.stringify(nestedProfile.experience?.majorProjects || []),
+        // Ensure array values for JSONB columns
+        specialties: JSON.stringify(ensureArray(nestedProfile.experience?.specialties)),
+        major_projects: JSON.stringify(ensureArray(nestedProfile.experience?.majorProjects)),
         total_employees: nestedProfile.team?.totalEmployees || '',
         engineers: nestedProfile.team?.engineers || '',
         supervisors: nestedProfile.team?.supervisors || '',
         technicians: nestedProfile.team?.technicians || '',
         laborers: nestedProfile.team?.laborers || '',
-        key_personnel: JSON.stringify(nestedProfile.team?.keyPersonnel || []),
-        categories: JSON.stringify(nestedProfile.preferences?.categories || []),
-        locations: JSON.stringify(nestedProfile.preferences?.locations || []),
+        // Ensure array values for JSONB columns
+        key_personnel: JSON.stringify(ensureArray(nestedProfile.team?.keyPersonnel)),
+        categories: JSON.stringify(ensureArray(nestedProfile.preferences?.categories)),
+        locations: JSON.stringify(ensureArray(nestedProfile.preferences?.locations)),
         budget_range: nestedProfile.preferences?.budgetRange || '',
         updated_at: new Date().toISOString()
       };
