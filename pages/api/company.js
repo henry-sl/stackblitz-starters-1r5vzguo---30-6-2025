@@ -1,6 +1,6 @@
 // pages/api/company.js
 // This API endpoint handles company profile operations with Supabase
-// Updated to use proper server-side JWT verification
+// Updated to use proper server-side JWT verification and service role permissions
 
 import { createClient } from '@supabase/supabase-js';
 import { companyOperations } from '../../lib/database';
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     // GET request - retrieve company profile
     if (req.method === 'GET') {
       try {
-        const profile = await companyOperations.getProfile(user.id);
+        const profile = await companyOperations.getProfile(supabaseServiceRole, user.id);
         
         // Return empty object if no profile exists yet
         if (!profile) {
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Company name is required' });
         }
         
-        const updatedProfile = await companyOperations.upsertProfile(user.id, updates);
+        const updatedProfile = await companyOperations.upsertProfile(supabaseServiceRole, user.id, updates);
         res.status(200).json(updatedProfile);
       } catch (error) {
         console.error('Error updating company profile:', error);
