@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/useToast';
 import { 
   ArrowLeft, 
@@ -24,7 +25,12 @@ import {
   Play,
   Download,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Bot,
+  Lightbulb,
+  BarChart2,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 
@@ -38,6 +44,7 @@ export default function TenderDetails() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
   const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
 
   // Fetch tender details from the API
   const { data: tender, error, isLoading } = useSWR(
@@ -93,6 +100,22 @@ export default function TenderDetails() {
     } finally {
       setIsGeneratingProposal(false);
     }
+  };
+
+  const handleChatSubmit = (e) => {
+    e.preventDefault();
+    if (!chatMessage.trim()) return;
+    
+    // TODO: Implement ChatGPT API integration here
+    console.log('Chat message:', chatMessage);
+    addToast('Chat functionality will be implemented with ChatGPT API', 'info');
+    setChatMessage('');
+  };
+
+  const handleSuggestionClick = (action) => {
+    // TODO: Implement suggestion actions with ChatGPT API
+    console.log('Suggestion clicked:', action);
+    addToast(`${action} functionality will be implemented with ChatGPT API`, 'info');
   };
 
   const getDaysUntilClosing = (closingDate) => {
@@ -352,6 +375,134 @@ export default function TenderDetails() {
               <Button variant="outline" className="w-full">
                 Share Tender
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* AI Assistant */}
+          <Card className="border-purple-200 bg-purple-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-purple-900">
+                <Bot className="w-5 h-5" />
+                <span>AI Assistant</span>
+              </CardTitle>
+              <p className="text-sm text-purple-700 mt-1">Tender analysis & proposal help</p>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="suggestions" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
+                  <TabsTrigger value="chat">Chat</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="suggestions" className="mt-4 space-y-4">
+                  <h4 className="font-semibold text-purple-900 mb-3">AI Recommendations</h4>
+                  
+                  {/* Key Strengths Suggestion */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200">
+                    <div className="flex items-start space-x-3">
+                      <Lightbulb className="w-4 h-4 text-purple-600 mt-0.5" />
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-900 text-sm">Key Strengths to Highlight</h5>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Emphasize your smart city experience and ISO certifications
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2 text-xs h-6 px-2"
+                          onClick={() => handleSuggestionClick('View Details')}
+                        >
+                          View Details →
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Proposal Template Suggestion */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200">
+                    <div className="flex items-start space-x-3">
+                      <FileText className="w-4 h-4 text-purple-600 mt-0.5" />
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-900 text-sm">Proposal Template</h5>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Generate a customized proposal template for this tender
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2 text-xs h-6 px-2"
+                          onClick={() => handleSuggestionClick('Generate')}
+                        >
+                          Generate →
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Competitive Analysis Suggestion */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-200">
+                    <div className="flex items-start space-x-3">
+                      <BarChart2 className="w-4 h-4 text-purple-600 mt-0.5" />
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-900 text-sm">Competitive Analysis</h5>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Analyze market positioning and competitor strategies
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2 text-xs h-6 px-2"
+                          onClick={() => handleSuggestionClick('Analyze')}
+                        >
+                          Analyze →
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Generate Full Proposal Button */}
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-sm"
+                    onClick={generateProposal}
+                    disabled={isGeneratingProposal}
+                  >
+                    {isGeneratingProposal ? 'Generating...' : 'Generate Full Proposal Draft'}
+                  </Button>
+                </TabsContent>
+                
+                <TabsContent value="chat" className="mt-4">
+                  {/* AI Assistant Welcome Message */}
+                  <div className="mb-4 p-3 bg-white rounded-lg border border-purple-200">
+                    <div className="flex items-start space-x-3">
+                      <Bot className="w-4 h-4 text-purple-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-700">
+                          Hello! I'm here to help you with this tender. I can analyze requirements, 
+                          suggest proposal strategies, and answer questions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chat Input */}
+                  <form onSubmit={handleChatSubmit} className="flex space-x-2">
+                    <Input
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      placeholder="Ask about this tender..."
+                      className="flex-1 text-sm"
+                    />
+                    <Button 
+                      type="submit" 
+                      size="sm" 
+                      className="bg-purple-600 hover:bg-purple-700"
+                      disabled={!chatMessage.trim()}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
