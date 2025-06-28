@@ -149,6 +149,7 @@ export default function ProposalEditorPage() {
   
   const [proposalContent, setProposalContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [versions, setVersions] = useState([
     { id: 1, timestamp: new Date("2025-01-15T10:30:00"), label: "Initial Draft" },
@@ -192,6 +193,37 @@ export default function ProposalEditorPage() {
       console.log("Draft saved");
     } catch (error) {
       console.error('Failed to save draft:', error);
+    }
+  };
+
+  const handleAIImprove = async () => {
+    if (!proposalContent || !id) return;
+    
+    try {
+      setIsImproving(true);
+      const result = await api('/api/improveProposal', {
+        method: 'POST',
+        body: { 
+          tenderId: proposal?.tenderId || '1', 
+          proposalContent 
+        }
+      });
+      
+      setProposalContent(result.improvedContent);
+      addToast('Proposal improved with AI suggestions!', 'success');
+      
+      // Add new version to history
+      const newVersion = {
+        id: versions.length + 1,
+        timestamp: new Date(),
+        label: "AI Improved"
+      };
+      setVersions([newVersion, ...versions]);
+      
+    } catch (error) {
+      addToast('Failed to improve proposal', 'error');
+    } finally {
+      setIsImproving(false);
     }
   };
 
@@ -299,9 +331,14 @@ export default function ProposalEditorPage() {
                 <CardTitle>Proposal Content</CardTitle>
                 {!isSubmitted && (
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleAIImprove}
+                      disabled={isImproving}
+                    >
                       <Sparkles className="w-4 h-4 mr-2" />
-                      AI Improve
+                      {isImproving ? 'Improving...' : 'AI Improve'}
                     </Button>
                     <Button variant="outline" size="sm">
                       <History className="w-4 h-4 mr-2" />
