@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -17,132 +17,93 @@ import {
   Mail,
   FileText
 } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
-import { useToast } from "../../hooks/useToast";
-import { supabase } from "../../lib/supabaseClient";
+
+// Mock company profile data
+const mockProfile = {
+  basicInfo: {
+    companyName: "Pembinaan Jaya Sdn Bhd",
+    registrationNumber: "123456-A",
+    address: "No. 123, Jalan Industri 2, Taman Perindustrian, 47100 Puchong, Selangor",
+    phone: "+603-8051-2345",
+    email: "info@pembinaan-jaya.com.my",
+    website: "www.pembinaan-jaya.com.my",
+    establishedYear: "2016"
+  },
+  certifications: {
+    cidbGrade: "G5",
+    cidbExpiry: "2026-12-31",
+    iso9001: true,
+    iso14001: false,
+    ohsas18001: true,
+    contractorLicense: "KL-2024-001234",
+    licenseExpiry: "2026-06-30"
+  },
+  experience: {
+    yearsInOperation: "8",
+    totalProjects: "52",
+    totalValue: "RM 15,200,000",
+    specialties: ["Road Construction", "Infrastructure", "Maintenance", "Drainage Works"],
+    majorProjects: [
+      {
+        name: "Federal Highway Maintenance Phase 2",
+        year: "2023",
+        value: "RM 1,200,000",
+        client: "Malaysian Highway Authority"
+      },
+      {
+        name: "Shah Alam Industrial Road Repairs",
+        year: "2022",
+        value: "RM 800,000",
+        client: "Selangor State Government"
+      },
+      {
+        name: "Klang Valley Drainage Improvement",
+        year: "2021",
+        value: "RM 950,000",
+        client: "Department of Irrigation and Drainage"
+      }
+    ]
+  },
+  team: {
+    totalEmployees: "25",
+    engineers: "3",
+    supervisors: "5",
+    technicians: "12",
+    laborers: "5",
+    keyPersonnel: [
+      {
+        name: "Eng. Ahmad Hassan",
+        position: "Project Manager",
+        experience: "15 years",
+        certifications: ["Professional Engineer", "Project Management"]
+      },
+      {
+        name: "Encik Rahman Ali",
+        position: "Site Supervisor",
+        experience: "12 years",
+        certifications: ["CIDB Certified", "Safety Officer"]
+      }
+    ]
+  },
+  preferences: {
+    categories: ["Construction", "Infrastructure", "Maintenance"],
+    locations: ["Kuala Lumpur", "Selangor", "Putrajaya"],
+    budgetRange: "RM 500,000 - RM 5,000,000"
+  }
+};
 
 export const CompanyProfile = () => {
-  const { user } = useAuth();
-  const { addToast } = useToast();
-  const [profile, setProfile] = useState({
-    basicInfo: {
-      companyName: '',
-      registrationNumber: '',
-      address: '',
-      phone: '',
-      email: '',
-      website: '',
-      establishedYear: ''
-    },
-    certifications: {
-      cidbGrade: '',
-      cidbExpiry: '',
-      iso9001: false,
-      iso14001: false,
-      ohsas18001: false,
-      contractorLicense: '',
-      licenseExpiry: ''
-    },
-    experience: {
-      yearsInOperation: '',
-      totalProjects: '',
-      totalValue: '',
-      specialties: [],
-      majorProjects: []
-    },
-    team: {
-      totalEmployees: '',
-      engineers: '',
-      supervisors: '',
-      technicians: '',
-      laborers: '',
-      keyPersonnel: []
-    },
-    preferences: {
-      categories: [],
-      locations: [],
-      budgetRange: ''
-    }
-  });
+  const [profile, setProfile] = useState(mockProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Load profile data when component mounts
-  useEffect(() => {
-    if (user) {
-      loadProfileData();
-    }
-  }, [user]);
-
-  const loadProfileData = async () => {
-    try {
-      setLoading(true);
-      
-      // Get the current session to get the access token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        addToast('Please log in to view your profile', 'error');
-        return;
-      }
-
-      // Fetch profile data from API
-      const response = await fetch('/api/company', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile data');
-      }
-
-      const profileData = await response.json();
-      setProfile(profileData);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      addToast('Failed to load profile data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      
-      // Get the current session to get the access token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        addToast('Please log in to save your profile', 'error');
-        return;
-      }
-
-      // Send profile data to API
-      const response = await fetch('/api/company', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(profile)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save profile data');
-      }
-
-      const updatedProfile = await response.json();
-      setProfile(updatedProfile);
-      setIsEditing(false);
-      addToast('Profile updated successfully!', 'success');
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      addToast('Failed to save profile', 'error');
-    } finally {
-      setIsSaving(false);
-    }
+    setIsSaving(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsSaving(false);
+    setIsEditing(false);
+    alert("Profile updated successfully!");
   };
 
   const getCompletionScore = () => {
@@ -150,20 +111,19 @@ export const CompanyProfile = () => {
     let completed = 0;
     let total = 0;
 
-    // Basic info (7 fields)
+    // Basic info (8 fields)
     Object.values(profile.basicInfo).forEach(value => {
       total++;
       if (value && value.trim()) completed++;
     });
 
-    // Certifications (7 fields)
-    total += 7;
+    // Certifications (6 fields)
+    total += 6;
     if (profile.certifications.cidbGrade) completed++;
     if (profile.certifications.cidbExpiry) completed++;
     if (profile.certifications.contractorLicense) completed++;
     if (profile.certifications.licenseExpiry) completed++;
     if (profile.certifications.iso9001) completed++;
-    if (profile.certifications.iso14001) completed++;
     if (profile.certifications.ohsas18001) completed++;
 
     // Experience (4 main fields)
@@ -177,18 +137,6 @@ export const CompanyProfile = () => {
   };
 
   const completionScore = getCompletionScore();
-
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          <div className="skeleton h-8 w-1/3"></div>
-          <div className="skeleton h-32 w-full"></div>
-          <div className="skeleton h-96 w-full"></div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -399,10 +347,6 @@ export const CompanyProfile = () => {
                   <select
                     value={profile.certifications.cidbGrade}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
-                      ...profile,
-                      certifications: { ...profile.certifications, cidbGrade: e.target.value }
-                    })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                   >
                     <option value="">Select Grade</option>
@@ -424,10 +368,6 @@ export const CompanyProfile = () => {
                     type="date"
                     value={profile.certifications.cidbExpiry}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
-                      ...profile,
-                      certifications: { ...profile.certifications, cidbExpiry: e.target.value }
-                    })}
                   />
                 </div>
 
@@ -438,10 +378,6 @@ export const CompanyProfile = () => {
                   <Input
                     value={profile.certifications.contractorLicense}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
-                      ...profile,
-                      certifications: { ...profile.certifications, contractorLicense: e.target.value }
-                    })}
                   />
                 </div>
 
@@ -453,10 +389,6 @@ export const CompanyProfile = () => {
                     type="date"
                     value={profile.certifications.licenseExpiry}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
-                      ...profile,
-                      certifications: { ...profile.certifications, licenseExpiry: e.target.value }
-                    })}
                   />
                 </div>
 
@@ -470,10 +402,6 @@ export const CompanyProfile = () => {
                         type="checkbox"
                         checked={profile.certifications.iso9001}
                         disabled={!isEditing}
-                        onChange={(e) => setProfile({
-                          ...profile,
-                          certifications: { ...profile.certifications, iso9001: e.target.checked }
-                        })}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>ISO 9001:2015 (Quality Management)</span>
@@ -484,10 +412,6 @@ export const CompanyProfile = () => {
                         type="checkbox"
                         checked={profile.certifications.iso14001}
                         disabled={!isEditing}
-                        onChange={(e) => setProfile({
-                          ...profile,
-                          certifications: { ...profile.certifications, iso14001: e.target.checked }
-                        })}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>ISO 14001 (Environmental Management)</span>
@@ -498,10 +422,6 @@ export const CompanyProfile = () => {
                         type="checkbox"
                         checked={profile.certifications.ohsas18001}
                         disabled={!isEditing}
-                        onChange={(e) => setProfile({
-                          ...profile,
-                          certifications: { ...profile.certifications, ohsas18001: e.target.checked }
-                        })}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>OHSAS 18001 (Occupational Health & Safety)</span>
@@ -533,10 +453,6 @@ export const CompanyProfile = () => {
                     <Input
                       value={profile.experience.yearsInOperation}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({
-                        ...profile,
-                        experience: { ...profile.experience, yearsInOperation: e.target.value }
-                      })}
                     />
                   </div>
                   <div>
@@ -546,10 +462,6 @@ export const CompanyProfile = () => {
                     <Input
                       value={profile.experience.totalProjects}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({
-                        ...profile,
-                        experience: { ...profile.experience, totalProjects: e.target.value }
-                      })}
                     />
                   </div>
                   <div>
@@ -559,10 +471,6 @@ export const CompanyProfile = () => {
                     <Input
                       value={profile.experience.totalValue}
                       disabled={!isEditing}
-                      onChange={(e) => setProfile({
-                        ...profile,
-                        experience: { ...profile.experience, totalValue: e.target.value }
-                      })}
                     />
                   </div>
                 </div>
@@ -599,7 +507,7 @@ export const CompanyProfile = () => {
                             Project Name
                           </label>
                           <Input
-                            value={project.name || ''}
+                            value={project.name}
                             disabled={!isEditing}
                           />
                         </div>
@@ -608,7 +516,7 @@ export const CompanyProfile = () => {
                             Year
                           </label>
                           <Input
-                            value={project.year || ''}
+                            value={project.year}
                             disabled={!isEditing}
                           />
                         </div>
@@ -617,7 +525,7 @@ export const CompanyProfile = () => {
                             Value
                           </label>
                           <Input
-                            value={project.value || ''}
+                            value={project.value}
                             disabled={!isEditing}
                           />
                         </div>
@@ -626,7 +534,7 @@ export const CompanyProfile = () => {
                             Client
                           </label>
                           <Input
-                            value={project.client || ''}
+                            value={project.client}
                             disabled={!isEditing}
                           />
                         </div>
@@ -688,7 +596,7 @@ export const CompanyProfile = () => {
                             Name
                           </label>
                           <Input
-                            value={person.name || ''}
+                            value={person.name}
                             disabled={!isEditing}
                           />
                         </div>
@@ -697,7 +605,7 @@ export const CompanyProfile = () => {
                             Position
                           </label>
                           <Input
-                            value={person.position || ''}
+                            value={person.position}
                             disabled={!isEditing}
                           />
                         </div>
@@ -706,7 +614,7 @@ export const CompanyProfile = () => {
                             Experience
                           </label>
                           <Input
-                            value={person.experience || ''}
+                            value={person.experience}
                             disabled={!isEditing}
                           />
                         </div>
@@ -715,7 +623,7 @@ export const CompanyProfile = () => {
                             Certifications
                           </label>
                           <div className="flex flex-wrap gap-2">
-                            {(person.certifications || []).map((cert, certIndex) => (
+                            {person.certifications.map((cert, certIndex) => (
                               <Badge key={certIndex} variant="outline">
                                 {cert}
                               </Badge>
@@ -783,10 +691,6 @@ export const CompanyProfile = () => {
                   <Input
                     value={profile.preferences.budgetRange}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({
-                      ...profile,
-                      preferences: { ...profile.preferences, budgetRange: e.target.value }
-                    })}
                     placeholder="e.g., RM 500,000 - RM 5,000,000"
                   />
                 </div>

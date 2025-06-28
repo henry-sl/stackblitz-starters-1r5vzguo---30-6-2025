@@ -1,18 +1,15 @@
 // components/ProfileForm.jsx
 // This component provides a form for viewing and updating the company profile
-// Updated to work with Supabase backend and nested profile structure
+// It fetches the current profile data and allows the user to edit and save changes
 
 import { useState, useEffect } from 'react';
+import { api } from '../lib/api';
 import { useToast } from '../hooks/useToast';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabaseClient';
 
 export default function ProfileForm() {
   const { addToast } = useToast();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true); // Loading state for initial data fetch
   const [saving, setSaving] = useState(false); // Loading state for save operation
-  
   // Form data state with default empty values
   const [formData, setFormData] = useState({
     name: '',
@@ -26,54 +23,24 @@ export default function ProfileForm() {
 
   // Load company profile data when component mounts
   useEffect(() => {
-    if (user) {
-      loadCompanyData();
-    }
-  }, [user]);
+    loadCompanyData();
+  }, []);
 
   // Function to fetch company profile data from the API
   const loadCompanyData = async () => {
     try {
-      setLoading(true);
-      
-      // Get the current session to get the access token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        addToast('Please log in to view your profile', 'error');
-        return;
-      }
-
-      // Fetch profile data from API
-      const response = await fetch('/api/company', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile data');
-      }
-
-      const nestedProfile = await response.json();
-      
-      // Map nested structure to flat formData structure
+      const data = await api('/api/company');
       setFormData({
-        name: nestedProfile.basicInfo?.companyName || '',
-        registrationNumber: nestedProfile.basicInfo?.registrationNumber || '',
-        certifications: nestedProfile.certifications ? 
-          Object.entries(nestedProfile.certifications)
-            .filter(([key, value]) => typeof value === 'boolean' && value)
-            .map(([key]) => key)
-            .join(', ') : '',
-        experience: nestedProfile.experience?.yearsInOperation || '',
-        contactEmail: nestedProfile.basicInfo?.email || '',
-        contactPhone: nestedProfile.basicInfo?.phone || '',
-        address: nestedProfile.basicInfo?.address || ''
+        name: data.name || '',
+        registrationNumber: data.registrationNumber || '',
+        certifications: data.certifications?.join(', ') || '',
+        experience: data.experience || '',
+        contactEmail: data.contactEmail || '',
+        contactPhone: data.contactPhone || '',
+        address: data.address || ''
       });
     } catch (error) {
-      console.error('Error loading company data:', error);
-      addToast('Failed to load profile data', 'error');
+      // Company profile might not exist yet
     } finally {
       setLoading(false);
     }
@@ -84,73 +51,16 @@ export default function ProfileForm() {
     e.preventDefault();
     try {
       setSaving(true);
-      
-      // Get the current session to get the access token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        addToast('Please log in to save your profile', 'error');
-        return;
-      }
-
-      // Transform flat formData to nested structure expected by API
-      const nestedProfile = {
-        basicInfo: {
-          companyName: formData.name,
-          registrationNumber: formData.registrationNumber,
-          email: formData.contactEmail,
-          phone: formData.contactPhone,
-          address: formData.address,
-          website: '',
-          establishedYear: ''
-        },
-        certifications: {
-          cidbGrade: '',
-          cidbExpiry: '',
-          iso9001: formData.certifications.toLowerCase().includes('iso9001') || formData.certifications.toLowerCase().includes('iso 9001'),
-          iso14001: formData.certifications.toLowerCase().includes('iso14001') || formData.certifications.toLowerCase().includes('iso 14001'),
-          ohsas18001: formData.certifications.toLowerCase().includes('ohsas18001') || formData.certifications.toLowerCase().includes('ohsas 18001'),
-          contractorLicense: '',
-          licenseExpiry: ''
-        },
-        experience: {
-          yearsInOperation: formData.experience,
-          totalProjects: '',
-          totalValue: '',
-          specialties: [],
-          majorProjects: []
-        },
-        team: {
-          totalEmployees: '',
-          engineers: '',
-          supervisors: '',
-          technicians: '',
-          laborers: '',
-          keyPersonnel: []
-        },
-        preferences: {
-          categories: [],
-          locations: [],
-          budgetRange: ''
-        }
-      };
-
-      // Send to API
-      const response = await fetch('/api/company', {
+      await api('/api/company', {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(nestedProfile)
+        body: {
+          ...formData,
+          // Convert comma-separated certifications string to array
+          certifications: formData.certifications.split(',').map(c => c.trim()).filter(Boolean)
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
       addToast('Company profile updated successfully!', 'success');
     } catch (error) {
-      console.error('Error updating profile:', error);
       addToast('Failed to update profile', 'error');
     } finally {
       setSaving(false);
@@ -307,15 +217,15 @@ export default function ProfileForm() {
         {/* Company Experience */}
         <div>
           <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-1">
-            Years of Experience
+            Company Experience & Capabilities
           </label>
-          <input
-            type="text"
+          <textarea
             id="experience"
             name="experience"
             value={formData.experience}
             onChange={handleChange}
-            placeholder="e.g., 8 years"
+            rows={6}
+            placeholder="Describe your company's experience, key projects, capabilities, and expertise..."
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
           />
         </div>

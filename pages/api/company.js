@@ -1,267 +1,28 @@
 // pages/api/company.js
-// This API endpoint handles company profile operations with Supabase integration
+// This API endpoint handles company profile operations
 // It supports GET (retrieve profile) and PUT (update profile) methods
 
-import { supabase } from '../../lib/supabaseClient';
+import { getCompanyProfile, updateCompanyProfile } from '../../lib/store';
 
-// Helper function to safely parse JSON with fallback
-function safeJsonParse(jsonString, fallback = []) {
-  if (!jsonString) return fallback;
-  if (typeof jsonString !== 'string') return fallback;
-  
-  try {
-    const parsed = JSON.parse(jsonString);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch (error) {
-    console.warn('Failed to parse JSON:', jsonString, error);
-    return fallback;
-  }
-}
-
-export default async function handler(req, res) {
+export default function handler(req, res) {
   // GET request - retrieve company profile
   if (req.method === 'GET') {
     try {
-      // Get the user from the request
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) {
-        return res.status(401).json({ error: 'No authorization token provided' });
-      }
-
-      // Get user from token
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return res.status(401).json({ error: 'Invalid or expired token' });
-      }
-
-      // Fetch company profile from Supabase
-      const { data: profile, error } = await supabase
-        .from('company_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-        console.error('Error fetching company profile:', error);
-        return res.status(500).json({ error: 'Failed to fetch company profile' });
-      }
-
-      // Transform flat Supabase data to nested structure expected by frontend
-      const transformedProfile = profile ? {
-        basicInfo: {
-          companyName: profile.company_name || '',
-          registrationNumber: profile.registration_number || '',
-          address: profile.address || '',
-          phone: profile.phone || '',
-          email: profile.email || '',
-          website: profile.website || '',
-          establishedYear: profile.established_year || ''
-        },
-        certifications: {
-          cidbGrade: profile.cidb_grade || '',
-          cidbExpiry: profile.cidb_expiry || '',
-          iso9001: profile.iso9001 || false,
-          iso14001: profile.iso14001 || false,
-          ohsas18001: profile.ohsas18001 || false,
-          contractorLicense: profile.contractor_license || '',
-          licenseExpiry: profile.license_expiry || ''
-        },
-        experience: {
-          yearsInOperation: profile.years_in_operation || '',
-          totalProjects: profile.total_projects || '',
-          totalValue: profile.total_value || '',
-          specialties: safeJsonParse(profile.specialties, []),
-          majorProjects: safeJsonParse(profile.major_projects, [])
-        },
-        team: {
-          totalEmployees: profile.total_employees || '',
-          engineers: profile.engineers || '',
-          supervisors: profile.supervisors || '',
-          technicians: profile.technicians || '',
-          laborers: profile.laborers || '',
-          keyPersonnel: safeJsonParse(profile.key_personnel, [])
-        },
-        preferences: {
-          categories: safeJsonParse(profile.categories, []),
-          locations: safeJsonParse(profile.locations, []),
-          budgetRange: profile.budget_range || ''
-        }
-      } : {
-        // Default empty nested structure if no profile exists
-        basicInfo: {
-          companyName: '',
-          registrationNumber: '',
-          address: '',
-          phone: '',
-          email: '',
-          website: '',
-          establishedYear: ''
-        },
-        certifications: {
-          cidbGrade: '',
-          cidbExpiry: '',
-          iso9001: false,
-          iso14001: false,
-          ohsas18001: false,
-          contractorLicense: '',
-          licenseExpiry: ''
-        },
-        experience: {
-          yearsInOperation: '',
-          totalProjects: '',
-          totalValue: '',
-          specialties: [],
-          majorProjects: []
-        },
-        team: {
-          totalEmployees: '',
-          engineers: '',
-          supervisors: '',
-          technicians: '',
-          laborers: '',
-          keyPersonnel: []
-        },
-        preferences: {
-          categories: [],
-          locations: [],
-          budgetRange: ''
-        }
-      };
-
-      res.status(200).json(transformedProfile);
+      const profile = getCompanyProfile();
+      res.status(200).json(profile);
     } catch (error) {
-      console.error('Error in GET /api/company:', error);
+      console.error('Error fetching company profile:', error);
       res.status(500).json({ error: 'Failed to fetch company profile' });
     }
   } 
   // PUT request - update company profile
   else if (req.method === 'PUT') {
     try {
-      // Get the user from the request
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) {
-        return res.status(401).json({ error: 'No authorization token provided' });
-      }
-
-      // Get user from token
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return res.status(401).json({ error: 'Invalid or expired token' });
-      }
-
-      const nestedProfile = req.body;
-
-      // Helper function to ensure array values for JSONB columns
-      const ensureArray = (value) => {
-        if (Array.isArray(value)) {
-          return value;
-        }
-        return [];
-      };
-
-      // Transform nested frontend data to flat structure for Supabase
-      // CRITICAL FIX: Convert empty date strings to null for proper database handling
-      const flatProfile = {
-        user_id: user.id,
-        company_name: nestedProfile.basicInfo?.companyName || '',
-        registration_number: nestedProfile.basicInfo?.registrationNumber || '',
-        address: nestedProfile.basicInfo?.address || '',
-        phone: nestedProfile.basicInfo?.phone || '',
-        email: nestedProfile.basicInfo?.email || '',
-        website: nestedProfile.basicInfo?.website || '',
-        established_year: nestedProfile.basicInfo?.establishedYear || '',
-        cidb_grade: nestedProfile.certifications?.cidbGrade || '',
-        // Convert empty string to null for date fields
-        cidb_expiry: nestedProfile.certifications?.cidbExpiry && nestedProfile.certifications.cidbExpiry.trim() !== '' 
-          ? nestedProfile.certifications.cidbExpiry 
-          : null,
-        iso9001: nestedProfile.certifications?.iso9001 || false,
-        iso14001: nestedProfile.certifications?.iso14001 || false,
-        ohsas18001: nestedProfile.certifications?.ohsas18001 || false,
-        contractor_license: nestedProfile.certifications?.contractorLicense || '',
-        // Convert empty string to null for date fields
-        license_expiry: nestedProfile.certifications?.licenseExpiry && nestedProfile.certifications.licenseExpiry.trim() !== '' 
-          ? nestedProfile.certifications.licenseExpiry 
-          : null,
-        years_in_operation: nestedProfile.experience?.yearsInOperation || '',
-        total_projects: nestedProfile.experience?.totalProjects || '',
-        total_value: nestedProfile.experience?.totalValue || '',
-        // Ensure array values for JSONB columns
-        specialties: JSON.stringify(ensureArray(nestedProfile.experience?.specialties)),
-        major_projects: JSON.stringify(ensureArray(nestedProfile.experience?.majorProjects)),
-        total_employees: nestedProfile.team?.totalEmployees || '',
-        engineers: nestedProfile.team?.engineers || '',
-        supervisors: nestedProfile.team?.supervisors || '',
-        technicians: nestedProfile.team?.technicians || '',
-        laborers: nestedProfile.team?.laborers || '',
-        // Ensure array values for JSONB columns
-        key_personnel: JSON.stringify(ensureArray(nestedProfile.team?.keyPersonnel)),
-        categories: JSON.stringify(ensureArray(nestedProfile.preferences?.categories)),
-        locations: JSON.stringify(ensureArray(nestedProfile.preferences?.locations)),
-        budget_range: nestedProfile.preferences?.budgetRange || '',
-        updated_at: new Date().toISOString()
-      };
-
-      // Use upsert to insert or update the profile
-      const { data, error } = await supabase
-        .from('company_profiles')
-        .upsert(flatProfile, { 
-          onConflict: 'user_id',
-          returning: 'minimal'
-        });
-
-      if (error) {
-        console.error('Error upserting company profile:', error);
-        return res.status(500).json({ error: 'Failed to update company profile' });
-      }
-
-      // Transform the flat data back to nested structure for response
-      const transformedProfile = {
-        basicInfo: {
-          companyName: flatProfile.company_name,
-          registrationNumber: flatProfile.registration_number,
-          address: flatProfile.address,
-          phone: flatProfile.phone,
-          email: flatProfile.email,
-          website: flatProfile.website,
-          establishedYear: flatProfile.established_year
-        },
-        certifications: {
-          cidbGrade: flatProfile.cidb_grade,
-          cidbExpiry: flatProfile.cidb_expiry,
-          iso9001: flatProfile.iso9001,
-          iso14001: flatProfile.iso14001,
-          ohsas18001: flatProfile.ohsas18001,
-          contractorLicense: flatProfile.contractor_license,
-          licenseExpiry: flatProfile.license_expiry
-        },
-        experience: {
-          yearsInOperation: flatProfile.years_in_operation,
-          totalProjects: flatProfile.total_projects,
-          totalValue: flatProfile.total_value,
-          specialties: JSON.parse(flatProfile.specialties),
-          majorProjects: JSON.parse(flatProfile.major_projects)
-        },
-        team: {
-          totalEmployees: flatProfile.total_employees,
-          engineers: flatProfile.engineers,
-          supervisors: flatProfile.supervisors,
-          technicians: flatProfile.technicians,
-          laborers: flatProfile.laborers,
-          keyPersonnel: JSON.parse(flatProfile.key_personnel)
-        },
-        preferences: {
-          categories: JSON.parse(flatProfile.categories),
-          locations: JSON.parse(flatProfile.locations),
-          budgetRange: flatProfile.budget_range
-        }
-      };
-
-      res.status(200).json(transformedProfile);
+      const updates = req.body;
+      const updatedProfile = updateCompanyProfile(updates);
+      res.status(200).json(updatedProfile);
     } catch (error) {
-      console.error('Error in PUT /api/company:', error);
+      console.error('Error updating company profile:', error);
       res.status(500).json({ error: 'Failed to update company profile' });
     }
   } 
