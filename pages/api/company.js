@@ -138,6 +138,7 @@ export default async function handler(req, res) {
       const nestedProfile = req.body;
 
       // Transform nested frontend data to flat structure for Supabase
+      // CRITICAL FIX: Convert empty date strings to null for proper database handling
       const flatProfile = {
         user_id: user.id,
         company_name: nestedProfile.basicInfo?.companyName || '',
@@ -148,12 +149,18 @@ export default async function handler(req, res) {
         website: nestedProfile.basicInfo?.website || '',
         established_year: nestedProfile.basicInfo?.establishedYear || '',
         cidb_grade: nestedProfile.certifications?.cidbGrade || '',
-        cidb_expiry: nestedProfile.certifications?.cidbExpiry || '',
+        // Convert empty string to null for date fields
+        cidb_expiry: nestedProfile.certifications?.cidbExpiry && nestedProfile.certifications.cidbExpiry.trim() !== '' 
+          ? nestedProfile.certifications.cidbExpiry 
+          : null,
         iso9001: nestedProfile.certifications?.iso9001 || false,
         iso14001: nestedProfile.certifications?.iso14001 || false,
         ohsas18001: nestedProfile.certifications?.ohsas18001 || false,
         contractor_license: nestedProfile.certifications?.contractorLicense || '',
-        license_expiry: nestedProfile.certifications?.licenseExpiry || '',
+        // Convert empty string to null for date fields
+        license_expiry: nestedProfile.certifications?.licenseExpiry && nestedProfile.certifications.licenseExpiry.trim() !== '' 
+          ? nestedProfile.certifications.licenseExpiry 
+          : null,
         years_in_operation: nestedProfile.experience?.yearsInOperation || '',
         total_projects: nestedProfile.experience?.totalProjects || '',
         total_value: nestedProfile.experience?.totalValue || '',
