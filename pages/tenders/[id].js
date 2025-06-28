@@ -86,7 +86,8 @@ export default function TenderDetails() {
         body: { tenderId: id }
       });
       addToast('Proposal draft created!', 'success');
-      router.push(`/proposals/${result.proposalId}`);
+      // Fixed: Navigate to the correct proposal editor path
+      router.push(`/proposals/edit/${result.proposalId}`);
     } catch (error) {
       addToast('Failed to generate proposal', 'error');
     } finally {
@@ -176,6 +177,7 @@ export default function TenderDetails() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline">{tender.category}</Badge>
                     {tender.isNew && <Badge variant="outline">Featured</Badge>}
+                    }
                   </div>
                 </div>
                 {getStatusBadge(tender.isNew ? 'new' : 'active')}
