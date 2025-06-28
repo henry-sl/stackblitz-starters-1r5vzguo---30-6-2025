@@ -62,9 +62,9 @@ export default function ContentArea({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex flex-col">
       {/* Editor Area */}
-      <div className="flex-1 relative">
+      <div className="relative">
         <textarea
           ref={editorRef}
           value={content}
@@ -73,7 +73,7 @@ export default function ContentArea({
           onKeyDown={handleKeyDown}
           readOnly={readOnly}
           placeholder={placeholder}
-          className={`w-full h-full p-6 border-0 resize-none focus:outline-none text-gray-900 leading-relaxed ${
+          className={`w-full min-h-[500px] max-h-[700px] p-6 border-0 resize-none focus:outline-none text-gray-900 leading-relaxed ${
             readOnly ? 'bg-gray-50 cursor-default' : 'bg-white'
           }`}
           style={{ 
