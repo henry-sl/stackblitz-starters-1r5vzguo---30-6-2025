@@ -200,6 +200,7 @@ export default function TenderDetails() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline">{tender.category}</Badge>
                     {tender.isNew && <Badge variant="outline">Featured</Badge>}
+                    }
                   </div>
                 </div>
                 {getStatusBadge(tender.isNew ? 'new' : 'active')}
