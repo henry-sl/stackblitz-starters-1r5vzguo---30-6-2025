@@ -1,34 +1,43 @@
 // pages/tenders/[id].js
-// This page displays detailed information about a specific tender
-// It includes AI-powered features like summarization, eligibility checking, and proposal drafting
+// Updated tender details page with new modern design
+// Converted from React Router to Next.js routing
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, api } from '../../lib/api';
-import SummaryBox from '../../components/SummaryBox';
-import EligibilityBox from '../../components/EligibilityBox';
-import VoicePlayer from '../../components/VoicePlayer';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/useToast';
 import { 
-  DocumentTextIcon, 
-  ShieldCheckIcon, 
-  PencilSquareIcon,
-  CalendarIcon,
-  BuildingOfficeIcon 
-} from '@heroicons/react/24/outline';
+  ArrowLeft, 
+  Building, 
+  MapPin, 
+  Calendar, 
+  DollarSign, 
+  FileText, 
+  Sparkles, 
+  CheckCircle, 
+  Play,
+  Download,
+  Clock,
+  AlertCircle
+} from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
 
 export default function TenderDetails() {
   const router = useRouter();
-  const { id } = router.query; // Get tender ID from URL
+  const { id } = router.query;
   const { addToast } = useToast();
   
-  // State for AI-generated content
-  const [summary, setSummary] = useState(null);
-  const [eligibility, setEligibility] = useState(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [loadingEligibility, setLoadingEligibility] = useState(false);
-  const [loadingProposal, setLoadingProposal] = useState(false);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [eligibilityCheck, setEligibilityCheck] = useState(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
 
   // Fetch tender details from the API
   const { data: tender, error, isLoading } = useSWR(
@@ -36,44 +45,42 @@ export default function TenderDetails() {
     fetcher
   );
 
-  // Generate an AI summary of the tender
-  const handleSummarize = async () => {
+  // Mock AI functions (in real app, these would call actual AI APIs)
+  const generateAISummary = async () => {
     try {
-      setLoadingSummary(true);
+      setIsGeneratingSummary(true);
       const result = await api('/api/summarize', {
         method: 'POST',
         body: { tenderId: id }
       });
-      setSummary(result.summary);
+      setAiSummary(result.summary);
       addToast('Summary generated successfully!', 'success');
     } catch (error) {
       addToast('Failed to generate summary', 'error');
     } finally {
-      setLoadingSummary(false);
+      setIsGeneratingSummary(false);
     }
   };
 
-  // Check company eligibility for the tender
-  const handleCheckEligibility = async () => {
+  const checkEligibility = async () => {
     try {
-      setLoadingEligibility(true);
+      setIsCheckingEligibility(true);
       const result = await api('/api/checkEligibility', {
         method: 'POST',
         body: { tenderId: id }
       });
-      setEligibility(result.eligibility);
+      setEligibilityCheck(result.eligibility);
       addToast('Eligibility check completed!', 'success');
     } catch (error) {
       addToast('Failed to check eligibility', 'error');
     } finally {
-      setLoadingEligibility(false);
+      setIsCheckingEligibility(false);
     }
   };
 
-  // Generate an AI-drafted proposal for the tender
-  const handleDraftProposal = async () => {
+  const generateProposal = async () => {
     try {
-      setLoadingProposal(true);
+      setIsGeneratingProposal(true);
       const result = await api('/api/generateProposal', {
         method: 'POST',
         body: { tenderId: id }
@@ -83,7 +90,22 @@ export default function TenderDetails() {
     } catch (error) {
       addToast('Failed to generate proposal', 'error');
     } finally {
-      setLoadingProposal(false);
+      setIsGeneratingProposal(false);
+    }
+  };
+
+  const getDaysUntilClosing = (closingDate) => {
+    return formatDistanceToNow(new Date(closingDate), { addSuffix: true });
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'new':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
+      case 'closing-soon':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Closing Soon</Badge>;
+      default:
+        return <Badge variant="secondary">Active</Badge>;
     }
   };
 
@@ -118,87 +140,238 @@ export default function TenderDetails() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        {/* Tender title */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">{tender.title}</h1>
-        
-        {/* Tender metadata */}
-        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
-          <div className="flex items-center">
-            <BuildingOfficeIcon className="h-4 w-4 mr-2" />
-            <span>{tender.agency}</span>
-          </div>
-          <div className="flex items-center">
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            <span>Closes: {new Date(tender.closingDate).toLocaleDateString()}</span>
-          </div>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {tender.category}
-          </span>
-          {daysUntilClosing <= 7 && daysUntilClosing > 0 && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent text-yellow-800">
-              {daysUntilClosing} days left
-            </span>
-          )}
-        </div>
-
-        {/* AI Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {/* Summarize button */}
-          <button
-            onClick={handleSummarize}
-            disabled={loadingSummary}
-            className="btn btn-primary"
-          >
-            <DocumentTextIcon className="h-4 w-4 mr-2" />
-            {loadingSummary ? 'Summarizing...' : 'Summarize'}
-          </button>
-          
-          {/* Check Eligibility button */}
-          <button
-            onClick={handleCheckEligibility}
-            disabled={loadingEligibility}
-            className="btn btn-secondary"
-          >
-            <ShieldCheckIcon className="h-4 w-4 mr-2" />
-            {loadingEligibility ? 'Checking...' : 'Check Eligibility'}
-          </button>
-          
-          {/* Draft Proposal button */}
-          <button
-            onClick={handleDraftProposal}
-            disabled={loadingProposal}
-            className="btn btn-primary"
-          >
-            <PencilSquareIcon className="h-4 w-4 mr-2" />
-            {loadingProposal ? 'Generating...' : 'Draft Proposal'}
-          </button>
-          
-          {/* Voice Player component */}
-          <VoicePlayer 
-            tenderId={id} 
-            onError={(error) => addToast(error, 'error')} 
-          />
-        </div>
+      {/* Back Navigation */}
+      <div className="mb-6">
+        <Link href="/tenders" className="flex items-center space-x-2 text-blue-600 hover:text-blue-700">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Tenders</span>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content - Tender Description */}
-        <div className="lg:col-span-2">
-          <div className="card">
-            <h2 className="text-xl font-semibold mb-4">Tender Description</h2>
-            <div className="prose prose-sm max-w-none">
-              <pre className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                {tender.description}
-              </pre>
-            </div>
-          </div>
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Header */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-2xl font-bold text-gray-900 mb-3">
+                    {tender.title}
+                  </CardTitle>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
+                    <div className="flex items-center space-x-1">
+                      <Building className="w-4 h-4" />
+                      <span>{tender.agency}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>Malaysia</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <FileText className="w-4 h-4" />
+                      <span>{tender.category}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">{tender.category}</Badge>
+                    {tender.isNew && <Badge variant="outline">Featured</Badge>}
+                  </div>
+                </div>
+                {getStatusBadge(tender.isNew ? 'new' : 'active')}
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* AI Tools Panel */}
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-blue-900">
+                <Sparkles className="w-5 h-5" />
+                <span>AI-Powered Tools</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button
+                  onClick={generateAISummary}
+                  disabled={isGeneratingSummary}
+                  className="flex flex-col items-center space-y-2 h-auto py-4 bg-blue-600 hover:bg-blue-700"
+                >
+                  <FileText className="w-6 h-6" />
+                  <span>{isGeneratingSummary ? 'Generating...' : 'AI Summary'}</span>
+                </Button>
+                
+                <Button
+                  onClick={checkEligibility}
+                  disabled={isCheckingEligibility}
+                  variant="outline"
+                  className="flex flex-col items-center space-y-2 h-auto py-4 border-blue-300 text-blue-700 hover:bg-blue-50"
+                >
+                  <CheckCircle className="w-6 h-6" />
+                  <span>{isCheckingEligibility ? 'Checking...' : 'Check Eligibility'}</span>
+                </Button>
+                
+                <Button
+                  onClick={generateProposal}
+                  disabled={isGeneratingProposal}
+                  variant="outline"
+                  className="flex flex-col items-center space-y-2 h-auto py-4 border-green-300 text-green-700 hover:bg-green-50"
+                >
+                  <Sparkles className="w-6 h-6" />
+                  <span>{isGeneratingProposal ? 'Generating...' : 'Generate Proposal'}</span>
+                </Button>
+              </div>
+
+              {/* AI Summary Result */}
+              {aiSummary && (
+                <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-900 mb-2 flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span>AI Summary</span>
+                    <Button variant="ghost" size="sm" className="ml-auto">
+                      <Play className="w-4 h-4" />
+                    </Button>
+                  </h4>
+                  <p className="text-gray-700 text-sm leading-relaxed">{aiSummary}</p>
+                </div>
+              )}
+
+              {/* Eligibility Check Result */}
+              {eligibilityCheck && (
+                <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-900 mb-3 flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Eligibility Assessment</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {eligibilityCheck.map((item, index) => (
+                      <div key={index} className="flex items-start space-x-3 text-sm">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center mt-0.5 ${
+                          item.eligible ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                          {item.eligible ? (
+                            <CheckCircle className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <AlertCircle className="w-3 h-3 text-red-600" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{item.requirement}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tender Details Tabs */}
+          <Card>
+            <Tabs defaultValue="description" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="requirements">Requirements</TabsTrigger>
+                <TabsTrigger value="contact">Contact</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="description" className="p-6">
+                <div className="prose max-w-none">
+                  <h3 className="text-lg font-semibold mb-4">Project Description</h3>
+                  <div className="whitespace-pre-line text-gray-700 leading-relaxed">
+                    {tender.description}
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="requirements" className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Requirements & Qualifications</h3>
+                <div className="text-gray-700">
+                  <p>Specific requirements will be detailed in the tender documentation.</p>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="contact" className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Agency</label>
+                    <p className="text-gray-900">{tender.agency}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Category</label>
+                    <p className="text-gray-900">{tender.category}</p>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </Card>
         </div>
 
-        {/* Sidebar - AI-generated content */}
+        {/* Sidebar */}
         <div className="space-y-6">
-          {summary && <SummaryBox summary={summary} loading={loadingSummary} />}
-          {eligibility && <EligibilityBox eligibility={eligibility} loading={loadingEligibility} />}
+          {/* Key Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Key Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Closing Date</label>
+                <p className="font-semibold text-gray-900">{new Date(tender.closingDate).toLocaleDateString()}</p>
+                <p className="text-sm text-red-600 flex items-center space-x-1">
+                  <Clock className="w-3 h-3" />
+                  <span>{getDaysUntilClosing(tender.closingDate)}</span>
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Category</label>
+                <p className="text-gray-900">{tender.category}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={generateProposal}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={isGeneratingProposal}
+              >
+                {isGeneratingProposal ? 'Generating...' : 'Start Proposal'}
+              </Button>
+              <Button variant="outline" className="w-full">
+                Save for Later
+              </Button>
+              <Button variant="outline" className="w-full">
+                Share Tender
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Voice Summary */}
+          <Card className="border-purple-200 bg-purple-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-purple-900">
+                <Play className="w-5 h-5" />
+                <span>Voice Summary</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-purple-700 mb-4">
+                Listen to an AI-generated audio summary of this tender
+              </p>
+              <Button variant="outline" className="w-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                <Play className="w-4 h-4 mr-2" />
+                Play Summary
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

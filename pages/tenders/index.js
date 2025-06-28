@@ -1,21 +1,24 @@
 // pages/tenders/index.js
-// Updated tenders listing page with new design and functionality
-// Integrates with existing API endpoints and maintains Next.js routing
+// Updated tenders listing page with new modern design
+// Converted from React Router to Next.js routing
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher } from '../../lib/api';
-import Badge from '../../components/Badge';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { 
-  MagnifyingGlassIcon, 
-  AdjustmentsHorizontalIcon, 
-  CalendarIcon, 
-  MapPinIcon, 
-  BuildingOfficeIcon, 
-  ClockIcon,
-  SparklesIcon
-} from '@heroicons/react/24/outline';
+  Search, 
+  Filter, 
+  Calendar, 
+  MapPin, 
+  Building, 
+  Clock,
+  Sparkles
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function TenderFeed() {
@@ -47,9 +50,9 @@ export default function TenderFeed() {
     );
     
     if (tender.isNew) {
-      return <Badge variant="success">New</Badge>;
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
     } else if (daysUntilClosing <= 7 && daysUntilClosing > 0) {
-      return <Badge variant="error">Closing Soon</Badge>;
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Closing Soon</Badge>;
     } else {
       return <Badge variant="secondary">Active</Badge>;
     }
@@ -83,13 +86,12 @@ export default function TenderFeed() {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
               placeholder="Search tenders by title, agency, or tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+              className="pl-10"
             />
           </div>
 
@@ -119,10 +121,10 @@ export default function TenderFeed() {
             ))}
           </select>
 
-          <button className="btn btn-secondary flex items-center space-x-2">
-            <AdjustmentsHorizontalIcon className="w-4 h-4" />
+          <Button variant="outline" className="flex items-center space-x-2">
+            <Filter className="w-4 h-4" />
             <span>More Filters</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -161,31 +163,29 @@ export default function TenderFeed() {
         // Render tender cards when data is available
         <div className="grid gap-6 lg:grid-cols-2">
           {filteredTenders.map((tender) => (
-            <div key={tender.id} className="card hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
-              {/* Header */}
-              <div className="pb-4">
+            <Card key={tender.id} className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
+              <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                    <CardTitle className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                       {tender.title}
-                    </h3>
+                    </CardTitle>
                     <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
                       <div className="flex items-center space-x-1">
-                        <BuildingOfficeIcon className="w-4 h-4" />
+                        <Building className="w-4 h-4" />
                         <span>{tender.agency}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <MapPinIcon className="w-4 h-4" />
+                        <MapPin className="w-4 h-4" />
                         <span>Malaysia</span>
                       </div>
                     </div>
                   </div>
                   {getStatusBadge(tender)}
                 </div>
-              </div>
+              </CardHeader>
 
-              {/* Content */}
-              <div className="pt-0">
+              <CardContent className="pt-0">
                 <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                   {tender.description}
                 </p>
@@ -205,7 +205,7 @@ export default function TenderFeed() {
                   <div>
                     <span className="text-gray-500">Closing:</span>
                     <p className="font-semibold text-gray-900 flex items-center space-x-1">
-                      <ClockIcon className="w-3 h-3" />
+                      <Clock className="w-3 h-3" />
                       <span>{getDaysUntilClosing(tender.closingDate)}</span>
                     </p>
                   </div>
@@ -214,31 +214,31 @@ export default function TenderFeed() {
                 {/* Actions */}
                 <div className="flex space-x-3">
                   <Link href={`/tenders/${tender.id}`} className="flex-1">
-                    <button className="w-full btn btn-primary">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
                       View Details
-                    </button>
+                    </Button>
                   </Link>
-                  <button className="btn btn-secondary flex items-center space-x-2">
-                    <SparklesIcon className="w-4 h-4" />
+                  <Button variant="outline" className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4" />
                     <span>AI Assist</span>
-                  </button>
+                  </Button>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
         // Empty State
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MagnifyingGlassIcon className="w-8 h-8 text-gray-400" />
+            <Search className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No tenders found</h3>
           <p className="text-gray-600 mb-4">
             Try adjusting your search criteria or filters to find more opportunities.
           </p>
-          <button 
-            className="btn btn-secondary"
+          <Button 
+            variant="outline"
             onClick={() => {
               setSearchTerm('');
               setSelectedCategory('all');
@@ -246,7 +246,7 @@ export default function TenderFeed() {
             }}
           >
             Clear Filters
-          </button>
+          </Button>
         </div>
       )}
     </div>
