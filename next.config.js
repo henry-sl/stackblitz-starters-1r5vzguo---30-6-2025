@@ -16,7 +16,7 @@ const nextConfig = {
 
 // Wrap the Next.js config with Lingo.dev compiler
 export default lingoCompiler.next({
-  sourceRoot: ".",
+  sourceRoot: "pages",
   sourceLocale: "en",
   targetLocales: ["es", "fr", "de", "ms", "zh"],
   models: "lingo.dev",
