@@ -1,17 +1,10 @@
-// pages/tenders/[id].js
-// Updated tender details page with new modern design
-// Converted from React Router to Next.js routing
-
-import React, { useState } from 'react';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
-import useSWR from 'swr';
-import { fetcher, api } from '../../lib/api';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { useToast } from '../../hooks/useToast';
+import React, { useState } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { 
   ArrowLeft, 
   Building, 
@@ -25,119 +18,112 @@ import {
   Download,
   Clock,
   AlertCircle
-} from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+} from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
 
-export default function TenderDetails() {
+// Mock tender data (in real app, this would come from API)
+const mockTender = {
+  id: "1",
+  title: "Road Maintenance and Repair Services - Kuala Lumpur District",
+  agency: "Kuala Lumpur City Hall (DBKL)",
+  category: "Construction",
+  location: "Kuala Lumpur",
+  budget: "RM 2,500,000",
+  closingDate: new Date("2025-02-15"),
+  publishedDate: new Date("2025-01-10"),
+  tenderId: "DBKL/2025/ROAD/001",
+  description: `This tender is for comprehensive road maintenance and repair services across the Kuala Lumpur district. The scope includes:
+
+1. Pothole repairs and road resurfacing
+2. Drainage system improvements and maintenance
+3. Road marking and signage updates
+4. Traffic management during construction
+5. Quality assurance and warranty provisions
+
+The contractor will be responsible for maintaining major roads including Jalan Tun Razak, Jalan Ampang, and connecting arterial roads. All work must comply with JKR specifications and local authority requirements.
+
+The project duration is 24 months with possible extension based on performance. Regular progress reports and quality inspections will be conducted throughout the project lifecycle.`,
+  requirements: [
+    "CIDB Grade G4 or above certification",
+    "Minimum 5 years experience in road construction and maintenance",
+    "Valid contractor license from relevant authorities",
+    "Proven track record of similar projects worth at least RM 1 million",
+    "Adequate equipment and machinery for road works",
+    "Qualified site supervisors and safety officers"
+  ],
+  documents: [
+    { name: "Tender Document", size: "2.4 MB", type: "PDF" },
+    { name: "Technical Specifications", size: "1.8 MB", type: "PDF" },
+    { name: "Site Plans", size: "5.2 MB", type: "PDF" },
+    { name: "BOQ Template", size: "156 KB", type: "Excel" }
+  ],
+  contactInfo: {
+    officer: "Encik Ahmad Rahman",
+    email: "ahmad.rahman@dbkl.gov.my",
+    phone: "+603-2691-1234",
+    office: "Engineering Department, DBKL"
+  },
+  status: "new",
+  tags: ["Road Works", "Maintenance", "Urban"]
+};
+
+export const TenderDetails = () => {
   const router = useRouter();
   const { id } = router.query;
-  const { addToast } = useToast();
-  
   const [aiSummary, setAiSummary] = useState(null);
   const [eligibilityCheck, setEligibilityCheck] = useState(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
   const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
 
-  // Fetch tender details from the API
-  const { data: tender, error, isLoading } = useSWR(
-    id ? `/api/tenders/${id}` : null,
-    fetcher
-  );
-
   // Mock AI functions (in real app, these would call actual AI APIs)
   const generateAISummary = async () => {
-    try {
-      setIsGeneratingSummary(true);
-      const result = await api('/api/summarize', {
-        method: 'POST',
-        body: { tenderId: id }
-      });
-      setAiSummary(result.summary);
-      addToast('Summary generated successfully!', 'success');
-    } catch (error) {
-      addToast('Failed to generate summary', 'error');
-    } finally {
-      setIsGeneratingSummary(false);
-    }
+    setIsGeneratingSummary(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setAiSummary(`This tender is for comprehensive road maintenance services in Kuala Lumpur with a budget of RM 2.5 million. Key requirements include CIDB G4+ certification and 5+ years experience. The 24-month project covers pothole repairs, resurfacing, and drainage improvements across major KL roads. Contractors need adequate equipment and qualified supervisors. This is a substantial opportunity for established road construction companies with proven track records.`);
+    setIsGeneratingSummary(false);
   };
 
   const checkEligibility = async () => {
-    try {
-      setIsCheckingEligibility(true);
-      const result = await api('/api/checkEligibility', {
-        method: 'POST',
-        body: { tenderId: id }
-      });
-      setEligibilityCheck(result.eligibility);
-      addToast('Eligibility check completed!', 'success');
-    } catch (error) {
-      addToast('Failed to check eligibility', 'error');
-    } finally {
-      setIsCheckingEligibility(false);
-    }
+    setIsCheckingEligibility(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setEligibilityCheck({
+      overall: "qualified",
+      checks: [
+        { requirement: "CIDB Grade G4 or above", status: "pass", note: "Your company has G5 certification" },
+        { requirement: "5+ years experience", status: "pass", note: "8 years of road construction experience" },
+        { requirement: "Valid contractor license", status: "pass", note: "License valid until 2026" },
+        { requirement: "RM 1M+ project experience", status: "warning", note: "Largest project was RM 800K - consider partnering" },
+        { requirement: "Equipment and machinery", status: "pass", note: "Adequate equipment inventory listed" },
+        { requirement: "Qualified supervisors", status: "pass", note: "3 certified site supervisors on staff" }
+      ]
+    });
+    setIsCheckingEligibility(false);
   };
 
   const generateProposal = async () => {
-    try {
-      setIsGeneratingProposal(true);
-      const result = await api('/api/generateProposal', {
-        method: 'POST',
-        body: { tenderId: id }
-      });
-      addToast('Proposal draft created!', 'success');
-      // Fixed: Navigate to the correct proposal editor path
-      router.push(`/proposals/edit/${result.proposalId}`);
-    } catch (error) {
-      addToast('Failed to generate proposal', 'error');
-    } finally {
-      setIsGeneratingProposal(false);
-    }
+    setIsGeneratingProposal(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    router.push(`/proposal/${id}`);
   };
 
   const getDaysUntilClosing = (closingDate) => {
-    return formatDistanceToNow(new Date(closingDate), { addSuffix: true });
+    return formatDistanceToNow(closingDate, { addSuffix: true });
   };
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'new':
+      case "new":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
-      case 'closing-soon':
+      case "closing-soon":
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Closing Soon</Badge>;
       default:
         return <Badge variant="secondary">Active</Badge>;
     }
   };
-
-  // Error state
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <p className="text-red-600">Failed to load tender details. Please try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (isLoading || !tender) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          <div className="skeleton h-8 w-3/4"></div>
-          <div className="skeleton h-4 w-1/2"></div>
-          <div className="skeleton h-32 w-full"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate days until closing date
-  const daysUntilClosing = Math.ceil(
-    (new Date(tender.closingDate) - new Date()) / (1000 * 60 * 60 * 24)
-  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -158,28 +144,31 @@ export default function TenderDetails() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-2xl font-bold text-gray-900 mb-3">
-                    {tender.title}
+                    {mockTender.title}
                   </CardTitle>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
                     <div className="flex items-center space-x-1">
                       <Building className="w-4 h-4" />
-                      <span>{tender.agency}</span>
+                      <span>{mockTender.agency}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <MapPin className="w-4 h-4" />
-                      <span>Malaysia</span>
+                      <span>{mockTender.location}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <FileText className="w-4 h-4" />
-                      <span>{tender.category}</span>
+                      <span>{mockTender.tenderId}</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{tender.category}</Badge>
-                    {tender.isNew && <Badge variant="outline">Featured</Badge>}
+                    {mockTender.tags.map((tag) => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
-                {getStatusBadge(tender.isNew ? 'new' : 'active')}
+                {getStatusBadge(mockTender.status)}
               </div>
             </CardHeader>
           </Card>
@@ -200,7 +189,7 @@ export default function TenderDetails() {
                   className="flex flex-col items-center space-y-2 h-auto py-4 bg-blue-600 hover:bg-blue-700"
                 >
                   <FileText className="w-6 h-6" />
-                  <span>{isGeneratingSummary ? 'Generating...' : 'AI Summary'}</span>
+                  <span>{isGeneratingSummary ? "Generating..." : "AI Summary"}</span>
                 </Button>
                 
                 <Button
@@ -210,7 +199,7 @@ export default function TenderDetails() {
                   className="flex flex-col items-center space-y-2 h-auto py-4 border-blue-300 text-blue-700 hover:bg-blue-50"
                 >
                   <CheckCircle className="w-6 h-6" />
-                  <span>{isCheckingEligibility ? 'Checking...' : 'Check Eligibility'}</span>
+                  <span>{isCheckingEligibility ? "Checking..." : "Check Eligibility"}</span>
                 </Button>
                 
                 <Button
@@ -220,7 +209,7 @@ export default function TenderDetails() {
                   className="flex flex-col items-center space-y-2 h-auto py-4 border-green-300 text-green-700 hover:bg-green-50"
                 >
                   <Sparkles className="w-6 h-6" />
-                  <span>{isGeneratingProposal ? 'Generating...' : 'Generate Proposal'}</span>
+                  <span>{isGeneratingProposal ? "Generating..." : "Generate Proposal"}</span>
                 </Button>
               </div>
 
@@ -244,21 +233,26 @@ export default function TenderDetails() {
                   <h4 className="font-semibold text-blue-900 mb-3 flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4" />
                     <span>Eligibility Assessment</span>
+                    <Badge className={eligibilityCheck.overall === "qualified" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                      {eligibilityCheck.overall === "qualified" ? "Qualified" : "Partially Qualified"}
+                    </Badge>
                   </h4>
                   <div className="space-y-2">
-                    {eligibilityCheck.map((item, index) => (
+                    {eligibilityCheck.checks.map((check, index) => (
                       <div key={index} className="flex items-start space-x-3 text-sm">
                         <div className={`w-4 h-4 rounded-full flex items-center justify-center mt-0.5 ${
-                          item.eligible ? 'bg-green-100' : 'bg-red-100'
+                          check.status === "pass" ? "bg-green-100" : 
+                          check.status === "warning" ? "bg-yellow-100" : "bg-red-100"
                         }`}>
-                          {item.eligible ? (
+                          {check.status === "pass" ? (
                             <CheckCircle className="w-3 h-3 text-green-600" />
                           ) : (
-                            <AlertCircle className="w-3 h-3 text-red-600" />
+                            <AlertCircle className="w-3 h-3 text-yellow-600" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">{item.requirement}</p>
+                          <p className="font-medium text-gray-900">{check.requirement}</p>
+                          <p className="text-gray-600">{check.note}</p>
                         </div>
                       </div>
                     ))}
@@ -271,9 +265,10 @@ export default function TenderDetails() {
           {/* Tender Details Tabs */}
           <Card>
             <Tabs defaultValue="description" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="requirements">Requirements</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
                 <TabsTrigger value="contact">Contact</TabsTrigger>
               </TabsList>
               
@@ -281,15 +276,41 @@ export default function TenderDetails() {
                 <div className="prose max-w-none">
                   <h3 className="text-lg font-semibold mb-4">Project Description</h3>
                   <div className="whitespace-pre-line text-gray-700 leading-relaxed">
-                    {tender.description}
+                    {mockTender.description}
                   </div>
                 </div>
               </TabsContent>
               
               <TabsContent value="requirements" className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Requirements & Qualifications</h3>
-                <div className="text-gray-700">
-                  <p>Specific requirements will be detailed in the tender documentation.</p>
+                <ul className="space-y-3">
+                  {mockTender.requirements.map((req, index) => (
+                    <li key={index} className="flex items-start space-x-3">
+                      <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-700">{req}</span>
+                    </li>
+                  ))}
+                </ul>
+              </TabsContent>
+              
+              <TabsContent value="documents" className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Tender Documents</h3>
+                <div className="space-y-3">
+                  {mockTender.documents.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="w-5 h-5 text-blue-500" />
+                        <div>
+                          <p className="font-medium text-gray-900">{doc.name}</p>
+                          <p className="text-sm text-gray-500">{doc.type} • {doc.size}</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </TabsContent>
               
@@ -297,12 +318,20 @@ export default function TenderDetails() {
                 <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Agency</label>
-                    <p className="text-gray-900">{tender.agency}</p>
+                    <label className="text-sm font-medium text-gray-500">Tender Officer</label>
+                    <p className="text-gray-900">{mockTender.contactInfo.officer}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Category</label>
-                    <p className="text-gray-900">{tender.category}</p>
+                    <label className="text-sm font-medium text-gray-500">Email</label>
+                    <p className="text-gray-900">{mockTender.contactInfo.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Phone</label>
+                    <p className="text-gray-900">{mockTender.contactInfo.phone}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Office</label>
+                    <p className="text-gray-900">{mockTender.contactInfo.office}</p>
                   </div>
                 </div>
               </TabsContent>
@@ -319,16 +348,24 @@ export default function TenderDetails() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
+                <label className="text-sm font-medium text-gray-500">Budget</label>
+                <p className="text-xl font-bold text-gray-900">{mockTender.budget}</p>
+              </div>
+              <div>
                 <label className="text-sm font-medium text-gray-500">Closing Date</label>
-                <p className="font-semibold text-gray-900">{new Date(tender.closingDate).toLocaleDateString()}</p>
+                <p className="font-semibold text-gray-900">{format(mockTender.closingDate, "PPP")}</p>
                 <p className="text-sm text-red-600 flex items-center space-x-1">
                   <Clock className="w-3 h-3" />
-                  <span>{getDaysUntilClosing(tender.closingDate)}</span>
+                  <span>{getDaysUntilClosing(mockTender.closingDate)}</span>
                 </p>
               </div>
               <div>
+                <label className="text-sm font-medium text-gray-500">Published</label>
+                <p className="text-gray-900">{format(mockTender.publishedDate, "PPP")}</p>
+              </div>
+              <div>
                 <label className="text-sm font-medium text-gray-500">Category</label>
-                <p className="text-gray-900">{tender.category}</p>
+                <p className="text-gray-900">{mockTender.category}</p>
               </div>
             </CardContent>
           </Card>
@@ -339,13 +376,11 @@ export default function TenderDetails() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button 
-                onClick={generateProposal}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={isGeneratingProposal}
-              >
-                {isGeneratingProposal ? 'Generating...' : 'Start Proposal'}
-              </Button>
+              <Link href={`/proposal/${id}`} className="block">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                  Start Proposal
+                </Button>
+              </Link>
               <Button variant="outline" className="w-full">
                 Save for Later
               </Button>
@@ -377,4 +412,6 @@ export default function TenderDetails() {
       </div>
     </div>
   );
-}
+};
+
+export default TenderDetails;
