@@ -1,11 +1,10 @@
 // components/HomePage/Navigation.jsx
-// Modern navigation component with responsive design and language switcher
-// Implements the navigation structure shown in the screenshots with Lingo.dev integration
+// Modern navigation component with responsive design
+// Implements the navigation structure shown in the screenshots
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { LocaleSwitcher } from "lingo.dev/react/client";
 
 export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -41,12 +40,8 @@ export default function Navigation() {
             ))}
           </div>
 
-          {/* Language Switcher and CTA */}
-          <div className="hidden md:flex items-center space-x-4">
-            <LocaleSwitcher 
-              locales={["en", "es", "fr", "de", "ms", "zh"]}
-              className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
-            />
+          {/* CTA Button */}
+          <div className="hidden md:block">
             <Link
               href="/signup"
               className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-sm"
@@ -82,15 +77,6 @@ export default function Navigation() {
                   {item.name}
                 </a>
               ))}
-              
-              {/* Mobile Language Switcher */}
-              <div className="px-3 py-2 border-t border-gray-100">
-                <LocaleSwitcher 
-                  locales={["en", "es", "fr", "de", "ms", "zh"]}
-                  className="text-sm text-gray-600"
-                />
-              </div>
-              
               <div className="pt-4">
                 <Link
                   href="/signup"

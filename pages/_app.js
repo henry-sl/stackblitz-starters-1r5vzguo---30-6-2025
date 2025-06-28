@@ -1,12 +1,11 @@
 // pages/_app.js
-// Main application entry point with error boundaries, providers, and Lingo.dev integration
+// Main application entry point with error boundaries and providers
 // Implements lazy loading and accessibility features
 
 import '../styles/globals.css';
 import { AuthProvider } from '../contexts/AuthContext';
 import Layout from '../components/Layout';
 import ErrorBoundary from '../components/ErrorBoundary';
-import { LingoProviderWrapper, loadDictionary } from "lingo.dev/react/client";
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
@@ -35,15 +34,13 @@ export default function App({ Component, pageProps }) {
 
   return (
     <ErrorBoundary>
-      <LingoProviderWrapper loadDictionary={(locale) => loadDictionary(locale)}>
-        <AuthProvider>
-          <Layout>
-            <ErrorBoundary>
-              <Component {...pageProps} />
-            </ErrorBoundary>
-          </Layout>
-        </AuthProvider>
-      </LingoProviderWrapper>
+      <AuthProvider>
+        <Layout>
+          <ErrorBoundary>
+            <Component {...pageProps} />
+          </ErrorBoundary>
+        </Layout>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

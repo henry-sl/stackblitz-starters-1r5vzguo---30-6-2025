@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { LocaleSwitcher } from "lingo.dev/react/client";
 import { 
   DocumentTextIcon,
   UserIcon,
@@ -10,8 +9,7 @@ import {
   QuestionMarkCircleIcon,
   Cog6ToothIcon,
   Bars3Icon,
-  XMarkIcon,
-  GlobeAltIcon
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
@@ -202,30 +200,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           </ul>
         </nav>
 
-        {/* Language Switcher and Footer */}
+        {/* Footer with version info - flex-shrink-0 to prevent compression */}
         <div className={`border-t border-gray-200 flex-shrink-0 ${isCollapsed ? 'p-2' : 'p-4'}`}>
-          {/* Language Switcher */}
-          {!isCollapsed ? (
-            <div className="mb-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <GlobeAltIcon className="h-4 w-4 text-gray-500" />
-                <span className="text-xs font-medium text-gray-700">Language</span>
-              </div>
-              <LocaleSwitcher 
-                locales={["en", "es", "fr", "de", "ms", "zh"]}
-                className="text-xs text-gray-600"
-              />
-            </div>
-          ) : (
-            <div className="mb-2 flex justify-center group relative">
-              <GlobeAltIcon className="h-5 w-5 text-gray-500 hover:text-gray-700 cursor-pointer" />
-              <div className="sidebar-tooltip">
-                Language
-              </div>
-            </div>
-          )}
-
-          {/* Version Info */}
           {!isCollapsed ? (
             <div className="text-xs text-gray-500 text-center space-y-1">
               <div className="font-medium">Tenderly Pro</div>
