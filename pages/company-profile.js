@@ -1,73 +1,330 @@
-// pages/company-profile.js
-// Enhanced company profile page with comprehensive profile management
-// Includes editable sections, document management, and validation status
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { api } from '../lib/api';
-import ProfileHeader from '../components/CompanyProfile/ProfileHeader';
-import EditableSection from '../components/CompanyProfile/EditableSection';
-import ComplianceDocuments from '../components/CompanyProfile/ComplianceDocuments';
-import ValidationStatus from '../components/CompanyProfile/ValidationStatus';
 import { 
-  BuildingOfficeIcon, 
-  EnvelopeIcon, 
-  IdentificationIcon,
-  AcademicCapIcon 
-} from '@heroicons/react/24/outline';
+  Building2, 
+  Save, 
+  Upload, 
+  CheckCircle, 
+  AlertCircle,
+  Users,
+  Award,
+  MapPin,
+  Phone,
+  Mail,
+  FileText
+} from "lucide-react";
 
-export default function CompanyProfilePage() {
+// Mock company profile data structure
+const defaultProfile = {
+  basicInfo: {
+    companyName: "",
+    registrationNumber: "",
+    address: "",
+    phone: "",
+    email: "",
+    website: "",
+    establishedYear: ""
+  },
+  certifications: {
+    cidbGrade: "",
+    cidbExpiry: "",
+    iso9001: false,
+    iso14001: false,
+    ohsas18001: false,
+    contractorLicense: "",
+    licenseExpiry: ""
+  },
+  experience: {
+    yearsInOperation: "",
+    totalProjects: "",
+    totalValue: "",
+    specialties: [],
+    majorProjects: []
+  },
+  team: {
+    totalEmployees: "",
+    engineers: "",
+    supervisors: "",
+    technicians: "",
+    laborers: "",
+    keyPersonnel: []
+  },
+  preferences: {
+    categories: [],
+    locations: [],
+    budgetRange: ""
+  }
+};
+
+export default function CompanyProfile() {
   const { user } = useAuth();
   const { addToast } = useToast();
+  const [profile, setProfile] = useState(defaultProfile);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [companyData, setCompanyData] = useState({});
 
-  // Load company data when component mounts
+  // Load existing company data when component mounts
   useEffect(() => {
-    loadCompanyData();
-  }, []);
+    if (user) {
+      loadCompanyData();
+    }
+  }, [user]);
 
-  // Function to fetch company profile data from API
+  // Function to fetch company profile data from existing API
   const loadCompanyData = async () => {
     try {
       const data = await api('/api/company');
-      setCompanyData(data);
+      
+      // Transform flat API data to nested profile structure
+      const transformedProfile = {
+        basicInfo: {
+          companyName: data.name || "",
+          registrationNumber: data.registrationNumber || "",
+          address: data.address || "",
+          phone: data.contactPhone || "",
+          email: data.contactEmail || "",
+          website: data.website || "",
+          establishedYear: data.establishedYear || ""
+        },
+        certifications: {
+          cidbGrade: data.cidbGrade || "",
+          cidbExpiry: data.cidbExpiry || "",
+          iso9001: data.iso9001 || false,
+          iso14001: data.iso14001 || false,
+          ohsas18001: data.ohsas18001 || false,
+          contractorLicense: data.contractorLicense || "",
+          licenseExpiry: data.licenseExpiry || ""
+        },
+        experience: {
+          yearsInOperation: data.yearsInOperation || "",
+          totalProjects: data.totalProjects || "",
+          totalValue: data.totalValue || "",
+          specialties: Array.isArray(data.certifications) ? data.certifications : [],
+          majorProjects: data.majorProjects || []
+        },
+        team: {
+          totalEmployees: data.totalEmployees || "",
+          engineers: data.engineers || "",
+          supervisors: data.supervisors || "",
+          technicians: data.technicians || "",
+          laborers: data.laborers || "",
+          keyPersonnel: data.keyPersonnel || []
+        },
+        preferences: {
+          categories: data.categories || [],
+          locations: data.locations || [],
+          budgetRange: data.budgetRange || ""
+        }
+      };
+      
+      setProfile(transformedProfile);
     } catch (error) {
-      // Company profile might not exist yet
-      setCompanyData({});
+      // Company profile might not exist yet, use defaults
+      console.log('No existing profile found, using defaults');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle field updates
-  const handleFieldSave = async (field, value) => {
+  const handleSave = async () => {
     try {
-      const updatedData = { ...companyData, [field]: value };
+      setIsSaving(true);
+      
+      // Transform nested profile structure back to flat API format
+      const flatData = {
+        name: profile.basicInfo.companyName,
+        registrationNumber: profile.basicInfo.registrationNumber,
+        address: profile.basicInfo.address,
+        contactPhone: profile.basicInfo.phone,
+        contactEmail: profile.basicInfo.email,
+        website: profile.basicInfo.website,
+        establishedYear: profile.basicInfo.establishedYear,
+        cidbGrade: profile.certifications.cidbGrade,
+        cidbExpiry: profile.certifications.cidbExpiry,
+        iso9001: profile.certifications.iso9001,
+        iso14001: profile.certifications.iso14001,
+        ohsas18001: profile.certifications.ohsas18001,
+        contractorLicense: profile.certifications.contractorLicense,
+        licenseExpiry: profile.certifications.licenseExpiry,
+        yearsInOperation: profile.experience.yearsInOperation,
+        totalProjects: profile.experience.totalProjects,
+        totalValue: profile.experience.totalValue,
+        certifications: profile.experience.specialties,
+        majorProjects: profile.experience.majorProjects,
+        totalEmployees: profile.team.totalEmployees,
+        engineers: profile.team.engineers,
+        supervisors: profile.team.supervisors,
+        technicians: profile.team.technicians,
+        laborers: profile.team.laborers,
+        keyPersonnel: profile.team.keyPersonnel,
+        categories: profile.preferences.categories,
+        locations: profile.preferences.locations,
+        budgetRange: profile.preferences.budgetRange
+      };
+
       await api('/api/company', {
         method: 'PUT',
-        body: updatedData
+        body: flatData
       });
-      setCompanyData(updatedData);
-      addToast('Field updated successfully!', 'success');
+      
+      setIsEditing(false);
+      addToast("Profile updated successfully!", 'success');
     } catch (error) {
-      addToast('Failed to update field', 'error');
-      throw error;
+      addToast("Failed to update profile", 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Calculate profile completion percentage
-  const calculateCompleteness = () => {
-    const fields = [
-      'name', 'registrationNumber', 'contactEmail', 'contactPhone', 
-      'address', 'experience', 'certifications'
-    ];
-    const filledFields = fields.filter(field => {
-      const value = companyData[field];
-      return value && (Array.isArray(value) ? value.length > 0 : value.trim() !== '');
-    }).length;
-    return Math.round((filledFields / fields.length) * 100);
+  const getCompletionScore = () => {
+    // Calculate profile completion based on filled fields
+    let completed = 0;
+    let total = 0;
+
+    // Basic info (7 fields)
+    Object.values(profile.basicInfo).forEach(value => {
+      total++;
+      if (value && value.toString().trim()) completed++;
+    });
+
+    // Certifications (7 fields)
+    total += 7;
+    if (profile.certifications.cidbGrade) completed++;
+    if (profile.certifications.cidbExpiry) completed++;
+    if (profile.certifications.contractorLicense) completed++;
+    if (profile.certifications.licenseExpiry) completed++;
+    if (profile.certifications.iso9001) completed++;
+    if (profile.certifications.iso14001) completed++;
+    if (profile.certifications.ohsas18001) completed++;
+
+    // Experience (4 main fields)
+    total += 4;
+    if (profile.experience.yearsInOperation) completed++;
+    if (profile.experience.totalProjects) completed++;
+    if (profile.experience.specialties.length > 0) completed++;
+    if (profile.experience.majorProjects.length > 0) completed++;
+
+    // Team (5 fields)
+    total += 5;
+    if (profile.team.totalEmployees) completed++;
+    if (profile.team.engineers) completed++;
+    if (profile.team.supervisors) completed++;
+    if (profile.team.technicians) completed++;
+    if (profile.team.laborers) completed++;
+
+    // Preferences (3 fields)
+    total += 3;
+    if (profile.preferences.categories.length > 0) completed++;
+    if (profile.preferences.locations.length > 0) completed++;
+    if (profile.preferences.budgetRange) completed++;
+
+    return Math.round((completed / total) * 100);
+  };
+
+  const addSpecialty = (specialty) => {
+    if (specialty.trim() && !profile.experience.specialties.includes(specialty.trim())) {
+      setProfile({
+        ...profile,
+        experience: {
+          ...profile.experience,
+          specialties: [...profile.experience.specialties, specialty.trim()]
+        }
+      });
+    }
+  };
+
+  const removeSpecialty = (index) => {
+    setProfile({
+      ...profile,
+      experience: {
+        ...profile.experience,
+        specialties: profile.experience.specialties.filter((_, i) => i !== index)
+      }
+    });
+  };
+
+  const addProject = () => {
+    const newProject = {
+      name: "",
+      year: "",
+      value: "",
+      client: ""
+    };
+    setProfile({
+      ...profile,
+      experience: {
+        ...profile.experience,
+        majorProjects: [...profile.experience.majorProjects, newProject]
+      }
+    });
+  };
+
+  const updateProject = (index, field, value) => {
+    const updatedProjects = [...profile.experience.majorProjects];
+    updatedProjects[index] = { ...updatedProjects[index], [field]: value };
+    setProfile({
+      ...profile,
+      experience: {
+        ...profile.experience,
+        majorProjects: updatedProjects
+      }
+    });
+  };
+
+  const removeProject = (index) => {
+    setProfile({
+      ...profile,
+      experience: {
+        ...profile.experience,
+        majorProjects: profile.experience.majorProjects.filter((_, i) => i !== index)
+      }
+    });
+  };
+
+  const addPersonnel = () => {
+    const newPerson = {
+      name: "",
+      position: "",
+      experience: "",
+      certifications: []
+    };
+    setProfile({
+      ...profile,
+      team: {
+        ...profile.team,
+        keyPersonnel: [...profile.team.keyPersonnel, newPerson]
+      }
+    });
+  };
+
+  const updatePersonnel = (index, field, value) => {
+    const updatedPersonnel = [...profile.team.keyPersonnel];
+    updatedPersonnel[index] = { ...updatedPersonnel[index], [field]: value };
+    setProfile({
+      ...profile,
+      team: {
+        ...profile.team,
+        keyPersonnel: updatedPersonnel
+      }
+    });
+  };
+
+  const removePersonnel = (index) => {
+    setProfile({
+      ...profile,
+      team: {
+        ...profile.team,
+        keyPersonnel: profile.team.keyPersonnel.filter((_, i) => i !== index)
+      }
+    });
   };
 
   // Show loading state
@@ -75,145 +332,723 @@ export default function CompanyProfilePage() {
     return (
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
+          <div className="skeleton h-8 w-1/3"></div>
           <div className="skeleton h-32 w-full"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="skeleton h-64 w-full"></div>
-            <div className="skeleton h-64 w-full"></div>
-          </div>
+          <div className="skeleton h-64 w-full"></div>
         </div>
       </div>
     );
   }
 
-  const completionPercentage = calculateCompleteness();
-
-  // Define editable sections
-  const basicInfoFields = [
-    {
-      key: 'name',
-      label: 'Company Name',
-      value: companyData.name,
-      placeholder: 'Enter your company name',
-      required: true
-    },
-    {
-      key: 'registrationNumber',
-      label: 'Registration Number',
-      value: companyData.registrationNumber,
-      placeholder: 'Enter registration number'
-    }
-  ];
-
-  const contactFields = [
-    {
-      key: 'contactEmail',
-      label: 'Contact Email',
-      value: companyData.contactEmail,
-      placeholder: 'Enter contact email'
-    },
-    {
-      key: 'contactPhone',
-      label: 'Contact Phone',
-      value: companyData.contactPhone,
-      placeholder: 'Enter contact phone number'
-    },
-    {
-      key: 'address',
-      label: 'Business Address',
-      value: companyData.address,
-      placeholder: 'Enter complete business address',
-      multiline: true
-    }
-  ];
-
-  const experienceFields = [
-    {
-      key: 'experience',
-      label: 'Company Experience & Capabilities',
-      value: companyData.experience,
-      placeholder: 'Describe your company\'s experience, key projects, capabilities, and expertise...',
-      multiline: true
-    }
-  ];
-
-  const certificationFields = [
-    {
-      key: 'certifications',
-      label: 'Certifications (comma-separated)',
-      value: Array.isArray(companyData.certifications) 
-        ? companyData.certifications.join(', ') 
-        : companyData.certifications,
-      placeholder: 'ISO 9001, ISO 14001, OHSAS 18001'
-    }
-  ];
+  const completionScore = getCompletionScore();
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Page Header */}
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
-        <p className="mt-2 text-gray-600">
-          Manage your company information, documents, and compliance status.
-        </p>
-      </div>
-
-      {/* Profile Header */}
-      <ProfileHeader 
-        companyData={companyData} 
-        completionPercentage={completionPercentage} 
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <EditableSection
-            title="Basic Information"
-            icon={BuildingOfficeIcon}
-            fields={basicInfoFields}
-            onFieldSave={handleFieldSave}
-          />
-
-          {/* Contact Information */}
-          <EditableSection
-            title="Contact Information"
-            icon={EnvelopeIcon}
-            fields={contactFields}
-            onFieldSave={handleFieldSave}
-          />
-
-          {/* Experience */}
-          <EditableSection
-            title="Experience & Capabilities"
-            icon={IdentificationIcon}
-            fields={experienceFields}
-            onFieldSave={handleFieldSave}
-          />
-
-          {/* Certifications */}
-          <EditableSection
-            title="Certifications"
-            icon={AcademicCapIcon}
-            fields={certificationFields}
-            onFieldSave={(field, value) => {
-              // Convert comma-separated string to array for certifications
-              const processedValue = field === 'certifications' 
-                ? value.split(',').map(c => c.trim()).filter(Boolean)
-                : value;
-              return handleFieldSave(field, processedValue);
-            }}
-          />
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
+            <p className="text-gray-600 mt-2">
+              Complete your profile to get personalized AI assistance and improve your tender success rate
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            {!isEditing ? (
+              <Button onClick={() => setIsEditing(true)}>
+                Edit Profile
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Validation Status */}
-          <ValidationStatus companyData={companyData} />
-
-          {/* Compliance Documents */}
-          <ComplianceDocuments />
-        </div>
+        {/* Completion Score */}
+        <Card className="mt-6 border-blue-200 bg-blue-50/50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-700 font-bold">{completionScore}%</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-blue-900">Profile Completion</h3>
+                  <p className="text-sm text-blue-700">
+                    {completionScore >= 80 ? "Excellent! Your profile is comprehensive." :
+                     completionScore >= 60 ? "Good progress! Add more details to improve AI assistance." :
+                     "Complete more sections to unlock better AI features."}
+                  </p>
+                </div>
+              </div>
+              <div className="w-24 h-2 bg-blue-200 rounded-full">
+                <div 
+                  className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+                  style={{ width: `${completionScore}%` }}
+                ></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Profile Tabs */}
+      <Tabs defaultValue="basic" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="basic">Basic Info</TabsTrigger>
+          <TabsTrigger value="certifications">Certifications</TabsTrigger>
+          <TabsTrigger value="experience">Experience</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+        </TabsList>
+
+        {/* Basic Information */}
+        <TabsContent value="basic">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Building2 className="w-5 h-5" />
+                <span>Basic Information</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Name *
+                  </label>
+                  <Input
+                    value={profile.basicInfo.companyName}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      basicInfo: { ...profile.basicInfo, companyName: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Registration Number *
+                  </label>
+                  <Input
+                    value={profile.basicInfo.registrationNumber}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      basicInfo: { ...profile.basicInfo, registrationNumber: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Address *
+                  </label>
+                  <Input
+                    value={profile.basicInfo.address}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      basicInfo: { ...profile.basicInfo, address: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number *
+                  </label>
+                  <Input
+                    value={profile.basicInfo.phone}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      basicInfo: { ...profile.basicInfo, phone: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address *
+                  </label>
+                  <Input
+                    type="email"
+                    value={profile.basicInfo.email}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      basicInfo: { ...profile.basicInfo, email: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Website
+                  </label>
+                  <Input
+                    value={profile.basicInfo.website}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      basicInfo: { ...profile.basicInfo, website: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Established Year *
+                  </label>
+                  <Input
+                    value={profile.basicInfo.establishedYear}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      basicInfo: { ...profile.basicInfo, establishedYear: e.target.value }
+                    })}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Certifications */}
+        <TabsContent value="certifications">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Award className="w-5 h-5" />
+                <span>Certifications & Licenses</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CIDB Grade *
+                  </label>
+                  <select
+                    value={profile.certifications.cidbGrade}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, cidbGrade: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select Grade</option>
+                    <option value="G1">G1</option>
+                    <option value="G2">G2</option>
+                    <option value="G3">G3</option>
+                    <option value="G4">G4</option>
+                    <option value="G5">G5</option>
+                    <option value="G6">G6</option>
+                    <option value="G7">G7</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CIDB Expiry Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={profile.certifications.cidbExpiry}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, cidbExpiry: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contractor License Number
+                  </label>
+                  <Input
+                    value={profile.certifications.contractorLicense}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, contractorLicense: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    License Expiry Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={profile.certifications.licenseExpiry}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, licenseExpiry: e.target.value }
+                    })}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Quality & Safety Certifications
+                  </label>
+                  <div className="space-y-3">
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={profile.certifications.iso9001}
+                        disabled={!isEditing}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          certifications: { ...profile.certifications, iso9001: e.target.checked }
+                        })}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>ISO 9001:2015 (Quality Management)</span>
+                      {profile.certifications.iso9001 && <CheckCircle className="w-4 h-4 text-green-500" />}
+                    </label>
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={profile.certifications.iso14001}
+                        disabled={!isEditing}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          certifications: { ...profile.certifications, iso14001: e.target.checked }
+                        })}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>ISO 14001 (Environmental Management)</span>
+                      {profile.certifications.iso14001 && <CheckCircle className="w-4 h-4 text-green-500" />}
+                    </label>
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={profile.certifications.ohsas18001}
+                        disabled={!isEditing}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          certifications: { ...profile.certifications, ohsas18001: e.target.checked }
+                        })}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>OHSAS 18001 (Occupational Health & Safety)</span>
+                      {profile.certifications.ohsas18001 && <CheckCircle className="w-4 h-4 text-green-500" />}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Experience */}
+        <TabsContent value="experience">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5" />
+                  <span>Company Experience</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Years in Operation
+                    </label>
+                    <Input
+                      value={profile.experience.yearsInOperation}
+                      disabled={!isEditing}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        experience: { ...profile.experience, yearsInOperation: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Total Projects Completed
+                    </label>
+                    <Input
+                      value={profile.experience.totalProjects}
+                      disabled={!isEditing}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        experience: { ...profile.experience, totalProjects: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Total Project Value
+                    </label>
+                    <Input
+                      value={profile.experience.totalValue}
+                      disabled={!isEditing}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        experience: { ...profile.experience, totalValue: e.target.value }
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Specialties
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {profile.experience.specialties.map((specialty, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center space-x-1">
+                        <span>{specialty}</span>
+                        {isEditing && (
+                          <button
+                            onClick={() => removeSpecialty(index)}
+                            className="ml-1 text-red-500 hover:text-red-700"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                  {isEditing && (
+                    <Input 
+                      placeholder="Add specialty (press Enter)" 
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          addSpecialty(e.target.value);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Major Projects</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {profile.experience.majorProjects.map((project, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Project Name
+                          </label>
+                          <Input
+                            value={project.name}
+                            disabled={!isEditing}
+                            onChange={(e) => updateProject(index, 'name', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Year
+                          </label>
+                          <Input
+                            value={project.year}
+                            disabled={!isEditing}
+                            onChange={(e) => updateProject(index, 'year', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Value
+                          </label>
+                          <Input
+                            value={project.value}
+                            disabled={!isEditing}
+                            onChange={(e) => updateProject(index, 'value', e.target.value)}
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Client
+                          </label>
+                          <Input
+                            value={project.client}
+                            disabled={!isEditing}
+                            onChange={(e) => updateProject(index, 'client', e.target.value)}
+                          />
+                        </div>
+                        {isEditing && (
+                          <div className="md:col-span-1 flex items-end">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => removeProject(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {isEditing && (
+                  <Button variant="outline" className="mt-4" onClick={addProject}>
+                    Add Project
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Team */}
+        <TabsContent value="team">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="w-5 h-5" />
+                <span>Team & Capacity</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{profile.team.totalEmployees || '0'}</div>
+                  <div className="text-sm text-gray-600">Total Employees</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.totalEmployees}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, totalEmployees: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{profile.team.engineers || '0'}</div>
+                  <div className="text-sm text-gray-600">Engineers</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.engineers}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, engineers: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">{profile.team.supervisors || '0'}</div>
+                  <div className="text-sm text-gray-600">Supervisors</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.supervisors}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, supervisors: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">{profile.team.technicians || '0'}</div>
+                  <div className="text-sm text-gray-600">Technicians</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.technicians}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, technicians: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-600">{profile.team.laborers || '0'}</div>
+                  <div className="text-sm text-gray-600">Laborers</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.laborers}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, laborers: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Key Personnel</h3>
+                <div className="space-y-4">
+                  {profile.team.keyPersonnel.map((person, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Name
+                          </label>
+                          <Input
+                            value={person.name}
+                            disabled={!isEditing}
+                            onChange={(e) => updatePersonnel(index, 'name', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Position
+                          </label>
+                          <Input
+                            value={person.position}
+                            disabled={!isEditing}
+                            onChange={(e) => updatePersonnel(index, 'position', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Experience
+                          </label>
+                          <Input
+                            value={person.experience}
+                            disabled={!isEditing}
+                            onChange={(e) => updatePersonnel(index, 'experience', e.target.value)}
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Certifications
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {person.certifications && person.certifications.map((cert, certIndex) => (
+                              <Badge key={certIndex} variant="outline">
+                                {cert}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        {isEditing && (
+                          <div className="md:col-span-1 flex items-end">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => removePersonnel(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {isEditing && (
+                  <Button variant="outline" className="mt-4" onClick={addPersonnel}>
+                    Add Personnel
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Preferences */}
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tender Preferences</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Preferred Categories
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {profile.preferences.categories.map((category, index) => (
+                      <Badge key={index} className="bg-blue-100 text-blue-800">
+                        {category}
+                      </Badge>
+                    ))}
+                  </div>
+                  {isEditing && (
+                    <Input placeholder="Add category" />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Preferred Locations
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {profile.preferences.locations.map((location, index) => (
+                      <Badge key={index} className="bg-green-100 text-green-800">
+                        {location}
+                      </Badge>
+                    ))}
+                  </div>
+                  {isEditing && (
+                    <Input placeholder="Add location" />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Budget Range
+                  </label>
+                  <Input
+                    value={profile.preferences.budgetRange}
+                    disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      preferences: { ...profile.preferences, budgetRange: e.target.value }
+                    })}
+                    placeholder="e.g., RM 500,000 - RM 5,000,000"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
