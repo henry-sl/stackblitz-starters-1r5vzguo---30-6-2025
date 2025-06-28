@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
-// Next.js configuration file
-// Defines various Next.js-specific settings
+// Next.js configuration file with Lingo.dev integration
+// Defines various Next.js-specific settings and wraps with Lingo.dev compiler
+
+import lingoCompiler from "lingo.dev/compiler";
 
 const nextConfig = {
   // Enable React strict mode for better development experience
@@ -12,4 +14,10 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+// Wrap the Next.js config with Lingo.dev compiler
+export default lingoCompiler.next({
+  sourceRoot: "pages",
+  sourceLocale: "en",
+  targetLocales: ["es", "fr", "de", "ms", "zh"],
+  models: "lingo.dev",
+})(nextConfig);
