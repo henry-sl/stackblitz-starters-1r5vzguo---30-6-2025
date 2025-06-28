@@ -35,8 +35,8 @@ export default function Layout({ children }) {
       
       {/* Main Content Area with proper left margin to account for fixed sidebar */}
       <div className={`transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-60'}`}>
-        {/* Main content */}
-        <main className="min-h-screen">
+        {/* Main content - removed min-h-screen to prevent outer scrollbar */}
+        <main>
           <div className="max-w-7xl mx-auto w-full px-4 py-6 lg:px-8 lg:py-8">
             {children}
           </div>
