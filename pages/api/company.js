@@ -1,23 +1,30 @@
 // pages/api/company.js
 // This API endpoint handles company profile operations with Supabase
-// It supports GET (retrieve profile) and PUT (update profile) methods
+// Updated to use proper server-side JWT verification
 
-import { supabase } from '../../lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { companyOperations } from '../../lib/database';
 
 export default async function handler(req, res) {
   try {
-    // Get the authenticated user from the request
+    // Get the authorization token from the request headers
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
       return res.status(401).json({ error: 'No authorization token provided' });
     }
 
-    // Get user from Supabase using the token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Create a Supabase client with service role key for server-side operations
+    const supabaseServiceRole = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // Verify the JWT token and get user information
+    const { data: { user }, error: authError } = await supabaseServiceRole.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('Authentication error:', authError);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
