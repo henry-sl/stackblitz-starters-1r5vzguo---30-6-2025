@@ -1,530 +1,205 @@
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
-import useSWR from 'swr';
-import { fetcher, api } from '../../../lib/api';
-import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Badge } from "../../../components/ui/badge";
+// pages/proposals/edit/[id].js
+// Enhanced proposal editor page with better error handling and workflow guidance
+// Handles missing proposals gracefully and provides clear user guidance
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '../../../contexts/AuthContext';
+import EditorContainer from '../../../components/ProposalEditor/EditorContainer';
+import LoadingSpinner from '../../../components/LoadingSpinner';
+import { api } from '../../../lib/api';
+import Link from 'next/link';
 import { 
-  ArrowLeft, 
-  Save, 
-  Send, 
-  History, 
-  Sparkles, 
-  Building2, 
-  Clock,
-  Shield,
-  AlertCircle,
-  CheckCircle
-} from "lucide-react";
-import { format } from "date-fns";
-import { useToast } from '../../../hooks/useToast';
-
-// Mock proposal template
-const mockProposalTemplate = `# Proposal for Road Maintenance and Repair Services - Kuala Lumpur District
-
-## Executive Summary
-
-We are pleased to submit our proposal for the comprehensive road maintenance and repair services across the Kuala Lumpur district. With over 8 years of experience in road construction and maintenance, our company is well-positioned to deliver high-quality services that meet DBKL's requirements and exceed expectations.
-
-## Company Background
-
-[Your Company Name] is a CIDB Grade G5 certified contractor specializing in road construction, maintenance, and infrastructure development. Since our establishment in 2016, we have successfully completed over 50 road maintenance projects across Malaysia, with a combined value exceeding RM 15 million.
-
-### Key Qualifications:
-- CIDB Grade G5 certification (exceeds G4 requirement)
-- 8+ years of road construction and maintenance experience
-- Valid contractor license (expires 2026)
-- ISO 9001:2015 Quality Management certification
-- 3 certified site supervisors on staff
-
-## Technical Approach
-
-### 1. Pothole Repairs and Road Resurfacing
-Our approach to pothole repairs follows JKR specifications and includes:
-- Comprehensive road condition assessment
-- Proper excavation and cleaning of damaged areas
-- Application of tack coat and hot mix asphalt
-- Compaction using appropriate equipment
-- Quality control testing
-
-### 2. Drainage System Improvements
-We will implement a systematic approach to drainage maintenance:
-- Survey and assessment of existing drainage systems
-- Clearing of blocked drains and culverts
-- Repair and replacement of damaged components
-- Installation of new drainage where required
-
-### 3. Road Marking and Signage
-Our road marking services include:
-- Thermoplastic road marking application
-- Reflective signage installation
-- Traffic management during works
-- Compliance with Malaysian road marking standards
-
-## Project Timeline
-
-We propose a 24-month project timeline with the following phases:
-- Phase 1 (Months 1-6): Major arterial roads
-- Phase 2 (Months 7-12): Secondary roads
-- Phase 3 (Months 13-18): Residential areas
-- Phase 4 (Months 19-24): Final inspections and warranty period
-
-## Quality Assurance
-
-Our quality assurance program includes:
-- Daily progress monitoring
-- Material testing and certification
-- Regular client reporting
-- Third-party quality audits
-- 24-month warranty on all works
-
-## Health, Safety & Environment
-
-Safety is our top priority. Our HSE program includes:
-- Certified safety officers on all sites
-- Daily safety briefings
-- Proper traffic management plans
-- Environmental protection measures
-- Emergency response procedures
-
-## Project Team
-
-### Key Personnel:
-- Project Manager: Eng. Ahmad Hassan (15+ years experience)
-- Site Supervisor: Encik Rahman Ali (CIDB certified)
-- Safety Officer: Puan Siti Aminah (NIOSH certified)
-- Quality Controller: Eng. David Lim (Materials testing certified)
-
-## Equipment and Resources
-
-We have adequate equipment for this project:
-- Asphalt pavers and compactors
-- Excavators and dump trucks
-- Road marking equipment
-- Testing equipment
-- Safety and traffic management equipment
-
-## Pricing
-
-Our competitive pricing is based on detailed analysis of project requirements:
-
-### Summary of Costs:
-- Materials: RM 1,200,000
-- Labor: RM 800,000
-- Equipment: RM 300,000
-- Overheads: RM 150,000
-- Profit: RM 50,000
-
-**Total Project Cost: RM 2,500,000**
-
-*Note: Detailed Bill of Quantities (BOQ) is attached as a separate document.*
-
-## Value Proposition
-
-Choosing our company provides:
-- Proven track record in similar projects
-- Competitive pricing with no hidden costs
-- Experienced and certified team
-- Modern equipment and technology
-- Strong commitment to quality and safety
-- Local presence for quick response
-
-## Conclusion
-
-We are confident that our experience, expertise, and commitment make us the ideal partner for this important infrastructure project. We look forward to the opportunity to contribute to the improvement of Kuala Lumpur's road network.
-
-Thank you for considering our proposal. We are available for any clarifications or discussions.
-
----
-
-*This proposal is valid for 30 days from the date of submission.*
-*All work will be carried out in accordance with JKR specifications and local authority requirements.*`;
+  ArrowLeftIcon,
+  ExclamationTriangleIcon,
+  DocumentTextIcon
+} from '@heroicons/react/24/outline';
 
 export default function ProposalEditorPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const { id } = router.query;
-  const { addToast } = useToast();
   
-  const [proposalContent, setProposalContent] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isImproving, setIsImproving] = useState(false);
-  const [lastSaved, setLastSaved] = useState(null);
-  const [versions, setVersions] = useState([
-    { id: 1, timestamp: new Date("2025-01-15T10:30:00"), label: "Initial Draft" },
-    { id: 2, timestamp: new Date("2025-01-15T14:15:00"), label: "Added Technical Details" },
-    { id: 3, timestamp: new Date("2025-01-15T16:45:00"), label: "Updated Pricing" },
-  ]);
+  const [proposal, setProposal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Fetch proposal data
-  const { data: proposal, error, isLoading } = useSWR(
-    id ? `/api/proposals/${id}` : null,
-    fetcher,
-    {
-      onSuccess: (data) => {
-        if (data && proposalContent === '') {
-          setProposalContent(data.content || mockProposalTemplate);
-        }
-      }
-    }
-  );
-
-  // Auto-save functionality
+  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!proposalContent || !id) return;
-    
-    const autoSave = setTimeout(() => {
-      handleSaveDraft();
-    }, 30000); // Auto-save every 30 seconds
-
-    return () => clearTimeout(autoSave);
-  }, [proposalContent, id]);
-
-  const handleSaveDraft = async () => {
-    if (!id || !proposalContent) return;
-    
-    try {
-      await api('/api/saveDraft', {
-        method: 'POST',
-        body: { proposalId: id, content: proposalContent }
-      });
-      setLastSaved(new Date());
-      console.log("Draft saved");
-    } catch (error) {
-      console.error('Failed to save draft:', error);
+    if (!authLoading && !user) {
+      router.push('/login');
     }
-  };
+  }, [user, authLoading, router]);
 
-  const handleAIImprove = async () => {
-    if (!proposalContent || !id) return;
-    
+  // Load proposal data
+  useEffect(() => {
+    if (id && user) {
+      loadProposal();
+    } else if (id && !user && !authLoading) {
+      setError('authentication');
+      setLoading(false);
+    }
+  }, [id, user, authLoading]);
+
+  const loadProposal = async () => {
+    // Validate ID format
+    if (!id || isNaN(Number(id))) {
+      setError('invalid_id');
+      setLoading(false);
+      return;
+    }
+
     try {
-      setIsImproving(true);
-      const result = await api('/api/improveProposal', {
-        method: 'POST',
-        body: { 
-          tenderId: proposal?.tenderId || '1', 
-          proposalContent 
-        }
-      });
-      
-      setProposalContent(result.improvedContent);
-      addToast('Proposal improved with AI suggestions!', 'success');
-      
-      // Add new version to history
-      const newVersion = {
-        id: versions.length + 1,
-        timestamp: new Date(),
-        label: "AI Improved"
-      };
-      setVersions([newVersion, ...versions]);
-      
+      setLoading(true);
+      const data = await api(`/api/proposals/${id}`);
+      setProposal(data);
+      setError(null);
     } catch (error) {
-      addToast('Failed to improve proposal', 'error');
+      console.error('Error loading proposal:', error);
+      setError('not_found');
     } finally {
-      setIsImproving(false);
+      setLoading(false);
     }
   };
 
-  const handleSubmitProposal = async () => {
-    setIsSubmitting(true);
-    
-    try {
-      // Save final content first
-      await handleSaveDraft();
-      
-      // Submit proposal
-      const result = await api('/api/submitProposal', {
-        method: 'POST',
-        body: { proposalId: id }
-      });
-      
-      addToast(`Proposal submitted successfully! Transaction ID: ${result.txId}`, 'success');
-      router.push('/reputation');
-    } catch (error) {
-      addToast('Failed to submit proposal', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const insertCompanyInfo = (section) => {
-    const companyInfo = {
-      background: "\n\n**Company Background:**\nEstablished construction company with CIDB G5 certification and 8+ years of experience in road maintenance and infrastructure projects.\n\n",
-      certifications: "\n\n**Certifications:**\n- CIDB Grade G5\n- ISO 9001:2015\n- Valid Contractor License\n- CIDB Certified Supervisors\n\n",
-      experience: "\n\n**Recent Projects:**\n- Federal Highway Maintenance (2023) - RM 1.2M\n- Shah Alam Road Repairs (2022) - RM 800K\n- Klang Valley Drainage Works (2021) - RM 950K\n\n"
-    };
-
-    const insertion = companyInfo[section] || "";
-    const cursorPosition = 0; // In real app, get actual cursor position
-    const newContent = proposalContent.slice(0, cursorPosition) + insertion + proposalContent.slice(cursorPosition);
-    setProposalContent(newContent);
-  };
-
-  // Loading state
-  if (isLoading) {
+  // Show loading state
+  if (authLoading || loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          <div className="skeleton h-8 w-1/2"></div>
-          <div className="skeleton h-96 w-full"></div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="large" message="Loading proposal editor..." />
       </div>
     );
   }
 
-  // Error state
+  // Handle different error states
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
-          <p className="text-red-600">Failed to load proposal. Please try again.</p>
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+          </div>
+          
+          {error === 'authentication' && (
+            <>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Authentication Required</h3>
+              <p className="text-gray-600 mb-4">Please log in to access the proposal editor.</p>
+              <Link href="/login" className="btn btn-primary">
+                Go to Login
+              </Link>
+            </>
+          )}
+          
+          {error === 'invalid_id' && (
+            <>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Invalid Proposal ID</h3>
+              <p className="text-gray-600 mb-4">The proposal ID in the URL is not valid.</p>
+              <div className="flex space-x-3 justify-center">
+                <button
+                  onClick={() => router.back()}
+                  className="btn btn-secondary"
+                >
+                  Go Back
+                </button>
+                <Link href="/tenders" className="btn btn-primary">
+                  Browse Tenders
+                </Link>
+              </div>
+            </>
+          )}
+          
+          {error === 'not_found' && (
+            <>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Proposal Not Found</h3>
+              <div className="text-gray-600 mb-6 space-y-2">
+                <p>This proposal doesn't exist or may have been removed.</p>
+                <p className="text-sm">
+                  <strong>Note:</strong> In development mode, proposals are stored in memory and are reset when the server restarts.
+                </p>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left max-w-md mx-auto">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">How to create a proposal:</h4>
+                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                  <li>Browse available tenders</li>
+                  <li>Click on a tender to view details</li>
+                  <li>Use the "Generate Proposal" button</li>
+                  <li>Edit your proposal in the editor</li>
+                </ol>
+              </div>
+              
+              <div className="flex space-x-3 justify-center">
+                <button
+                  onClick={() => router.back()}
+                  className="btn btn-secondary"
+                >
+                  Go Back
+                </button>
+                <Link href="/tenders" className="btn btn-primary">
+                  Browse Tenders
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
-  const isSubmitted = proposal?.status === 'submitted';
-  const tenderId = proposal?.tenderId || '1';
+  // Don't render if user is not authenticated
+  if (!user) {
+    return null;
+  }
+
+  const isSubmitted = proposal.status === 'submitted';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <Link href={`/tenders/${tenderId}`} className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Tender Details</span>
-        </Link>
-        
+    <div className="h-screen flex flex-col">
+      {/* Page Header */}
+      <header className="flex-shrink-0 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Proposal Editor</h1>
-            <p className="text-gray-600">
-              {proposal?.tenderTitle || "Road Maintenance and Repair Services - Kuala Lumpur District"}
-            </p>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              <span>Back</span>
+            </button>
           </div>
           
-          <div className="flex items-center space-x-3">
-            {lastSaved && (
-              <span className="text-sm text-gray-500 flex items-center space-x-1">
-                <Clock className="w-4 h-4" />
-                <span>Saved {format(lastSaved, "HH:mm")}</span>
-              </span>
-            )}
-            {!isSubmitted && (
-              <Button variant="outline" onClick={handleSaveDraft}>
-                <Save className="w-4 h-4 mr-2" />
-                Save Draft
-              </Button>
-            )}
+          <div className="flex items-center space-x-4">
+            {/* Status Badge */}
+            <span 
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                isSubmitted 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}
+              aria-label={`Proposal status: ${isSubmitted ? 'Submitted' : 'Draft'}`}
+            >
+              {isSubmitted ? 'Submitted' : 'Draft'}
+            </span>
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Main Editor */}
-        <div className="lg:col-span-3">
-          <Card className="h-full">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle>Proposal Content</CardTitle>
-                {!isSubmitted && (
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleAIImprove}
-                      disabled={isImproving}
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      {isImproving ? 'Improving...' : 'AI Improve'}
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <History className="w-4 h-4 mr-2" />
-                      Versions
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <textarea
-                value={proposalContent}
-                onChange={(e) => setProposalContent(e.target.value)}
-                readOnly={isSubmitted}
-                className={`w-full h-[600px] p-4 border border-gray-300 rounded-lg font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  isSubmitted ? 'bg-gray-50 cursor-default' : ''
-                }`}
-                placeholder="Start writing your proposal..."
-              />
-            </CardContent>
-          </Card>
+        
+        <div className="mt-2">
+          <h1 className="text-2xl font-bold text-gray-900">Proposal Editor</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {proposal.tenderTitle}
+          </p>
         </div>
+      </header>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Insert */}
-          {!isSubmitted && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Building2 className="w-5 h-5" />
-                  <span>Quick Insert</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => insertCompanyInfo('background')}
-                >
-                  Company Background
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => insertCompanyInfo('certifications')}
-                >
-                  Certifications
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => insertCompanyInfo('experience')}
-                >
-                  Past Experience
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Version History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <History className="w-5 h-5" />
-                <span>Version History</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {versions.map((version) => (
-                  <div key={version.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
-                    <div>
-                      <p className="text-sm font-medium">{version.label}</p>
-                      <p className="text-xs text-gray-500">{format(version.timestamp, "MMM d, HH:mm")}</p>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      View
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Submission Panel */}
-          {!isSubmitted ? (
-            <Card className="border-green-200 bg-green-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-green-900">
-                  <Shield className="w-5 h-5" />
-                  <span>Submit Proposal</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-2 text-sm">
-                    <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
-                    <p className="text-gray-700">
-                      Submitting will record your proposal on the Algorand blockchain and lock further edits.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Proposal content ready</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Company profile complete</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>All requirements met</span>
-                    </div>
-                  </div>
-
-                  <Button 
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={handleSubmitProposal}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Submitting to Blockchain...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Submit Proposal
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-blue-200 bg-blue-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-blue-900">
-                  <CheckCircle className="w-5 h-5" />
-                  <span>Proposal Submitted</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-blue-700">
-                  This proposal has been submitted and recorded on the blockchain. No further edits are allowed.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Tender Reference */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tender Reference</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-gray-500">Budget:</span>
-                  <p className="font-semibold">RM 2,500,000</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Closing:</span>
-                  <p className="font-semibold">Feb 15, 2025</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Category:</span>
-                  <p className="font-semibold">Construction</p>
-                </div>
-              </div>
-              <Link href={`/tenders/${tenderId}`} className="block mt-3">
-                <Button variant="outline" size="sm" className="w-full">
-                  View Full Tender
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Editor Container */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 min-h-0">
+        <EditorContainer
+          proposalId={proposal.id}
+          initialContent={proposal.content || ''}
+          proposalTitle={proposal.tenderTitle}
+          readOnly={isSubmitted}
+        />
+      </main>
     </div>
   );
 }
