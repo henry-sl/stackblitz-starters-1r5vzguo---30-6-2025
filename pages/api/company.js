@@ -1,33 +1,65 @@
 // pages/api/company.js
-// This API endpoint handles company profile operations
+// This API endpoint handles company profile operations with Supabase
 // It supports GET (retrieve profile) and PUT (update profile) methods
 
-import { getCompanyProfile, updateCompanyProfile } from '../../lib/store';
+import { supabase } from '../../lib/supabaseClient';
+import { companyOperations } from '../../lib/database';
 
-export default function handler(req, res) {
-  // GET request - retrieve company profile
-  if (req.method === 'GET') {
-    try {
-      const profile = getCompanyProfile();
-      res.status(200).json(profile);
-    } catch (error) {
-      console.error('Error fetching company profile:', error);
-      res.status(500).json({ error: 'Failed to fetch company profile' });
+export default async function handler(req, res) {
+  try {
+    // Get the authenticated user from the request
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No authorization token provided' });
     }
-  } 
-  // PUT request - update company profile
-  else if (req.method === 'PUT') {
-    try {
-      const updates = req.body;
-      const updatedProfile = updateCompanyProfile(updates);
-      res.status(200).json(updatedProfile);
-    } catch (error) {
-      console.error('Error updating company profile:', error);
-      res.status(500).json({ error: 'Failed to update company profile' });
+
+    // Get user from Supabase using the token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
     }
-  } 
-  // Other methods not allowed
-  else {
-    res.status(405).json({ error: 'Method not allowed' });
+
+    // GET request - retrieve company profile
+    if (req.method === 'GET') {
+      try {
+        const profile = await companyOperations.getProfile(user.id);
+        
+        // Return empty object if no profile exists yet
+        if (!profile) {
+          return res.status(200).json({});
+        }
+        
+        res.status(200).json(profile);
+      } catch (error) {
+        console.error('Error fetching company profile:', error);
+        res.status(500).json({ error: 'Failed to fetch company profile' });
+      }
+    } 
+    // PUT request - update company profile
+    else if (req.method === 'PUT') {
+      try {
+        const updates = req.body;
+        
+        // Validate required fields
+        if (!updates.name || !updates.name.trim()) {
+          return res.status(400).json({ error: 'Company name is required' });
+        }
+        
+        const updatedProfile = await companyOperations.upsertProfile(user.id, updates);
+        res.status(200).json(updatedProfile);
+      } catch (error) {
+        console.error('Error updating company profile:', error);
+        res.status(500).json({ error: 'Failed to update company profile' });
+      }
+    } 
+    // Other methods not allowed
+    else {
+      res.status(405).json({ error: 'Method not allowed' });
+    }
+  } catch (error) {
+    console.error('Unexpected error in company API:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
