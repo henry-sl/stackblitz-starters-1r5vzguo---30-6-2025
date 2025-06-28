@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { 
   ArrowLeft, 
   Save, 
@@ -139,11 +140,12 @@ Thank you for considering our proposal. We are available for any clarifications 
 *This proposal is valid for 30 days from the date of submission.*
 *All work will be carried out in accordance with JKR specifications and local authority requirements.*`;
 
-export const ProposalEditor = (): JSX.Element => {
-  const { tenderId } = useParams();
+export const ProposalEditor = () => {
+  const router = useRouter();
+  const { tenderId } = router.query;
   const [proposalContent, setProposalContent] = useState(mockProposalTemplate);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [lastSaved, setLastSaved] = useState(null);
   const [versions, setVersions] = useState([
     { id: 1, timestamp: new Date("2025-01-15T10:30:00"), label: "Initial Draft" },
     { id: 2, timestamp: new Date("2025-01-15T14:15:00"), label: "Added Technical Details" },
@@ -180,14 +182,14 @@ export const ProposalEditor = (): JSX.Element => {
     setIsSubmitting(false);
   };
 
-  const insertCompanyInfo = (section: string) => {
+  const insertCompanyInfo = (section) => {
     const companyInfo = {
       background: "\n\n**Company Background:**\nEstablished construction company with CIDB G5 certification and 8+ years of experience in road maintenance and infrastructure projects.\n\n",
       certifications: "\n\n**Certifications:**\n- CIDB Grade G5\n- ISO 9001:2015\n- Valid Contractor License\n- CIDB Certified Supervisors\n\n",
       experience: "\n\n**Recent Projects:**\n- Federal Highway Maintenance (2023) - RM 1.2M\n- Shah Alam Road Repairs (2022) - RM 800K\n- Klang Valley Drainage Works (2021) - RM 950K\n\n"
     };
 
-    const insertion = companyInfo[section as keyof typeof companyInfo] || "";
+    const insertion = companyInfo[section] || "";
     const cursorPosition = 0; // In real app, get actual cursor position
     const newContent = proposalContent.slice(0, cursorPosition) + insertion + proposalContent.slice(cursorPosition);
     setProposalContent(newContent);
@@ -197,7 +199,7 @@ export const ProposalEditor = (): JSX.Element => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-6">
-        <Link to={`/tender/${tenderId}`} className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4">
+        <Link href={`/tenders/${tenderId}`} className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4">
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Tender Details</span>
         </Link>
@@ -389,7 +391,7 @@ export const ProposalEditor = (): JSX.Element => {
                   <p className="font-semibold">Construction</p>
                 </div>
               </div>
-              <Link to={`/tender/${tenderId}`} className="block mt-3">
+              <Link href={`/tenders/${tenderId}`} className="block mt-3">
                 <Button variant="outline" size="sm" className="w-full">
                   View Full Tender
                 </Button>

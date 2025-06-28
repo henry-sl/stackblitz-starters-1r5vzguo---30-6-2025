@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { 
   ArrowLeft, 
   Building, 
@@ -66,11 +67,11 @@ The project duration is 24 months with possible extension based on performance. 
   tags: ["Road Works", "Maintenance", "Urban"]
 };
 
-export const TenderDetails = (): JSX.Element => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [eligibilityCheck, setEligibilityCheck] = useState<any>(null);
+export const TenderDetails = () => {
+  const router = useRouter();
+  const { id } = router.query;
+  const [aiSummary, setAiSummary] = useState(null);
+  const [eligibilityCheck, setEligibilityCheck] = useState(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
   const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
@@ -106,14 +107,14 @@ export const TenderDetails = (): JSX.Element => {
     setIsGeneratingProposal(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 3000));
-    navigate(`/proposal/${id}`);
+    router.push(`/proposal/${id}`);
   };
 
-  const getDaysUntilClosing = (closingDate: Date) => {
+  const getDaysUntilClosing = (closingDate) => {
     return formatDistanceToNow(closingDate, { addSuffix: true });
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status) => {
     switch (status) {
       case "new":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
@@ -128,7 +129,7 @@ export const TenderDetails = (): JSX.Element => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back Navigation */}
       <div className="mb-6">
-        <Link to="/tenders" className="flex items-center space-x-2 text-blue-600 hover:text-blue-700">
+        <Link href="/tenders" className="flex items-center space-x-2 text-blue-600 hover:text-blue-700">
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Tenders</span>
         </Link>
@@ -237,7 +238,7 @@ export const TenderDetails = (): JSX.Element => {
                     </Badge>
                   </h4>
                   <div className="space-y-2">
-                    {eligibilityCheck.checks.map((check: any, index: number) => (
+                    {eligibilityCheck.checks.map((check, index) => (
                       <div key={index} className="flex items-start space-x-3 text-sm">
                         <div className={`w-4 h-4 rounded-full flex items-center justify-center mt-0.5 ${
                           check.status === "pass" ? "bg-green-100" : 
@@ -375,7 +376,7 @@ export const TenderDetails = (): JSX.Element => {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link to={`/proposal/${id}`} className="block">
+              <Link href={`/proposal/${id}`} className="block">
                 <Button className="w-full bg-blue-600 hover:bg-blue-700">
                   Start Proposal
                 </Button>
@@ -412,3 +413,5 @@ export const TenderDetails = (): JSX.Element => {
     </div>
   );
 };
+
+export default TenderDetails;

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Badge } from "../components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import Link from "next/link";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { 
   Search, 
   Filter, 
@@ -71,7 +71,7 @@ const mockTenders = [
   }
 ];
 
-export const TenderFeed = (): JSX.Element => {
+export const TenderFeed = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
@@ -89,7 +89,7 @@ export const TenderFeed = (): JSX.Element => {
     return matchesSearch && matchesCategory && matchesLocation;
   });
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status) => {
     switch (status) {
       case "new":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
@@ -100,7 +100,7 @@ export const TenderFeed = (): JSX.Element => {
     }
   };
 
-  const getDaysUntilClosing = (closingDate: Date) => {
+  const getDaysUntilClosing = (closingDate) => {
     return formatDistanceToNow(closingDate, { addSuffix: true });
   };
 
@@ -222,7 +222,7 @@ export const TenderFeed = (): JSX.Element => {
 
               {/* Actions */}
               <div className="flex space-x-3">
-                <Link to={`/tender/${tender.id}`} className="flex-1">
+                <Link href={`/tenders/${tender.id}`} className="flex-1">
                   <Button className="w-full bg-blue-600 hover:bg-blue-700">
                     View Details
                   </Button>
@@ -259,3 +259,5 @@ export const TenderFeed = (): JSX.Element => {
     </div>
   );
 };
+
+export default TenderFeed;
