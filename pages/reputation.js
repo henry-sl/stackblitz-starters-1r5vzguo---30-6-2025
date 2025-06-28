@@ -8,52 +8,8 @@ import { fetcher } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { Award, Shield, ExternalLink, Calendar, CheckCircle, TrendingUp, FileText, Blocks as Blockchain, Trophy } from 'lucide-react';
+import { Award, Shield, ExternalLink, Calendar, CheckCircle, TrendingUp, FileText, Clock as Blockchain, Trophy } from 'lucide-react';
 import { format } from 'date-fns';
-
-// Mock blockchain attestation data
-const mockAttestations = [
-  {
-    id: '1',
-    tenderTitle: 'Road Maintenance and Repair Services - KL District',
-    submissionDate: new Date('2025-01-15T16:30:00'),
-    transactionId: 'ALGO_TX_7K8M9N2P4Q5R',
-    blockHeight: 12345678,
-    status: 'confirmed',
-    tenderValue: 'RM 2,500,000',
-    agency: 'DBKL'
-  },
-  {
-    id: '2',
-    tenderTitle: 'IT Infrastructure Upgrade - Government Buildings',
-    submissionDate: new Date('2025-01-10T14:20:00'),
-    transactionId: 'ALGO_TX_3F4G5H6J7K8L',
-    blockHeight: 12344521,
-    status: 'confirmed',
-    tenderValue: 'RM 1,800,000',
-    agency: 'Ministry of Digital Development'
-  },
-  {
-    id: '3',
-    tenderTitle: 'School Building Construction - Selangor',
-    submissionDate: new Date('2025-01-05T11:45:00'),
-    transactionId: 'ALGO_TX_9M1N2P3Q4R5S',
-    blockHeight: 12343876,
-    status: 'confirmed',
-    tenderValue: 'RM 8,500,000',
-    agency: 'Ministry of Education'
-  },
-  {
-    id: '4',
-    tenderTitle: 'Waste Management System Implementation',
-    submissionDate: new Date('2024-12-28T09:15:00'),
-    transactionId: 'ALGO_TX_6T7U8V9W1X2Y',
-    blockHeight: 12342109,
-    status: 'confirmed',
-    tenderValue: 'RM 3,200,000',
-    agency: 'Selangor State Government'
-  }
-];
 
 // Mock reputation metrics
 const reputationMetrics = {
@@ -242,9 +198,9 @@ export default function ReputationPage() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : attestations && attestations.length > 0 ? (
             <div className="space-y-4">
-              {mockAttestations.map((attestation) => (
+              {attestations.map((attestation) => (
                 <div key={attestation.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -257,16 +213,16 @@ export default function ReputationPage() {
                           <p>{attestation.agency}</p>
                         </div>
                         <div>
-                          <span className="font-medium">Value:</span>
-                          <p className="font-semibold text-gray-900">{attestation.tenderValue}</p>
-                        </div>
-                        <div>
                           <span className="font-medium">Submitted:</span>
-                          <p>{format(attestation.submissionDate, 'PPp')}</p>
+                          <p>{new Date(attestation.submittedAt).toLocaleDateString()}</p>
                         </div>
                         <div>
-                          <span className="font-medium">Block Height:</span>
-                          <p className="font-mono">{attestation.blockHeight.toLocaleString()}</p>
+                          <span className="font-medium">Status:</span>
+                          <p>{getStatusBadge(attestation.status)}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium">Transaction:</span>
+                          <p className="font-mono text-xs">{attestation.txId.substring(0, 8)}...{attestation.txId.substring(-8)}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex items-center space-x-4">
@@ -277,7 +233,7 @@ export default function ReputationPage() {
                         <div className="flex items-center space-x-2">
                           <span className="text-sm font-medium text-gray-700">Transaction ID:</span>
                           <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                            {attestation.transactionId}
+                            {attestation.txId}
                           </code>
                         </div>
                       </div>
@@ -286,7 +242,7 @@ export default function ReputationPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(getAlgorandExplorerUrl(attestation.transactionId), '_blank')}
+                        onClick={() => window.open(getAlgorandExplorerUrl(attestation.txId), '_blank')}
                       >
                         <ExternalLink className="w-3 h-3 mr-1" />
                         View Proof
@@ -296,10 +252,8 @@ export default function ReputationPage() {
                 </div>
               ))}
             </div>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && !error && mockAttestations.length === 0 && (
+          ) : (
+            // Empty State
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-gray-400" />
