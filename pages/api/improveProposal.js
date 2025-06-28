@@ -1,8 +1,8 @@
 // pages/api/improveProposal.js
-// API endpoint for AI-powered proposal improvement
-// Uses tender context, proposal content, and company profile to enhance proposals
+// API endpoint for AI-powered proposal improvement using Supabase
+// Updated to use Supabase instead of local store
 
-import { getTenderById, getCompanyProfile } from '../../lib/store';
+import { supabase } from '../../lib/supabaseClient';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -16,25 +16,51 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Get tender details and company profile for context
-    const tender = getTenderById(tenderId);
-    const profile = getCompanyProfile();
-    
-    if (!tender) {
-      return res.status(404).json({ error: 'Tender not found' });
+    // Get the user from the request
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No authorization token provided' });
     }
+
+    // Get user from token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Get tender details from Supabase
+    const { data: tender, error: tenderError } = await supabase
+      .from('tenders')
+      .select('*')
+      .eq('id', tenderId)
+      .single();
+    
+    if (tenderError) {
+      if (tenderError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Tender not found' });
+      }
+      console.error('Error fetching tender:', tenderError);
+      return res.status(500).json({ error: 'Failed to fetch tender details' });
+    }
+
+    // Get company profile from Supabase
+    const { data: profile } = await supabase
+      .from('company_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
 
     // Build context for AI improvement
     const tenderContext = `Title: ${tender.title}\nDescription: ${tender.description}`;
     const companyContext = profile ? 
-      `Company: ${profile.name}\nExperience: ${profile.experience}\nCertifications: ${profile.certifications?.join(', ') || 'None'}` :
+      `Company: ${profile.company_name}\nExperience: ${profile.years_in_operation} years\nCertifications: ${profile.iso9001 ? 'ISO 9001:2015' : 'None'}` :
       'Company profile not available';
 
     // Mock AI improvement (in real app, would use Claude/GPT API)
     if (!process.env.ANTHROPIC_API_KEY) {
       // Simulate AI improvement with enhanced content
       const improvedContent = proposalContent
-        .replace(/\[Your Company Name\]/g, profile?.name || 'Your Company Name')
+        .replace(/\[Your Company Name\]/g, profile?.company_name || 'Your Company Name')
         .replace(/## Executive Summary\n\n.*?\n\n/s, `## Executive Summary
 
 We are pleased to submit our comprehensive proposal for "${tender.title}" as advertised by ${tender.agency}. With our proven track record and specialized expertise, we are uniquely positioned to deliver exceptional results that exceed your expectations while ensuring full compliance with all requirements.
@@ -44,7 +70,7 @@ Our approach combines industry best practices with innovative solutions, backed 
 `)
         .replace(/## Company Background\n\n.*?\n\n/s, `## Company Background
 
-${profile?.name || 'Our company'} brings extensive experience and proven capabilities to this project. ${profile?.experience || 'We have successfully completed numerous similar projects with excellent results.'} Our team of certified professionals is committed to delivering high-quality work that meets the highest industry standards.
+${profile?.company_name || 'Our company'} brings extensive experience and proven capabilities to this project. ${profile?.years_in_operation ? `With ${profile.years_in_operation} years of experience, ` : ''}we have successfully completed numerous similar projects with excellent results. Our team of certified professionals is committed to delivering high-quality work that meets the highest industry standards.
 
 Our key strengths include:
 - Proven track record in similar projects

@@ -1,14 +1,12 @@
 // pages/proposals/edit/[id].js
 // Enhanced proposal editor page with comprehensive editor functionality
-// Provides rich text editing, autosave, and export capabilities
+// Updated to work with Supabase authentication
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../hooks/useToast';
-import { api } from '../../../lib/api';
 import useSWR from 'swr';
-import { fetcher } from '../../../lib/api';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import AutosaveIndicator from '../../../components/ProposalEditor/AutosaveIndicator';
 import ToolbarSection from '../../../components/ProposalEditor/ToolbarSection';
@@ -20,6 +18,28 @@ import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from '../../../lib/supabaseClient';
+
+// Custom fetcher that includes authorization header
+const authenticatedFetcher = async (url) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('No session');
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch');
+  }
+
+  return response.json();
+};
 
 export default function ProposalEditorPage() {
   const router = useRouter();
@@ -60,13 +80,13 @@ export default function ProposalEditorPage() {
   // Fetch tender details using proposal's tenderId
   const { data: tender } = useSWR(
     proposal?.tenderId ? `/api/tenders/${proposal.tenderId}` : null,
-    fetcher
+    authenticatedFetcher
   );
 
   // Fetch version history
   const { data: versions } = useSWR(
     id ? `/api/versions/${id}` : null,
-    fetcher
+    authenticatedFetcher
   );
 
   const loadProposal = async () => {
@@ -78,7 +98,32 @@ export default function ProposalEditorPage() {
 
     try {
       setLoading(true);
-      const data = await api(`/api/proposals/${id}`);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('authentication');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/proposals/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError('not_found');
+        } else {
+          throw new Error('Failed to fetch proposal');
+        }
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
       setProposal(data);
       setContent(data.content || '');
       setError(null);
@@ -95,8 +140,14 @@ export default function ProposalEditorPage() {
     try {
       setIsCreatingProposal(true);
       
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        addToast('Please log in to create a proposal', 'error');
+        return;
+      }
+
       // Get the first available tender
-      const tenders = await api('/api/tenders');
+      const tenders = await authenticatedFetcher('/api/tenders');
       if (!tenders || tenders.length === 0) {
         addToast('No tenders available to create a proposal for', 'error');
         return;
@@ -105,10 +156,20 @@ export default function ProposalEditorPage() {
       const firstTender = tenders[0];
       
       // Generate a proposal for the first tender
-      const result = await api('/api/generateProposal', {
+      const response = await fetch('/api/generateProposal', {
         method: 'POST',
-        body: { tenderId: firstTender.id }
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tenderId: firstTender.id })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to create proposal');
+      }
+
+      const result = await response.json();
 
       // Redirect to the new proposal editor
       router.push(`/proposals/edit/${result.proposalId}`);
@@ -134,10 +195,24 @@ export default function ProposalEditorPage() {
     try {
       setSaveStatus('saving');
       
-      await api('/api/saveDraft', {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setSaveStatus('error');
+        return;
+      }
+
+      const response = await fetch('/api/saveDraft', {
         method: 'POST',
-        body: { proposalId: id, content }
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ proposalId: id, content })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to save');
+      }
       
       setSaveStatus('saved');
       setLastSaved(new Date().toISOString());
@@ -224,13 +299,30 @@ export default function ProposalEditorPage() {
 
     try {
       setIsGeneratingImprovement(true);
-      const result = await api('/api/improveProposal', {
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        addToast('Please log in to improve proposal', 'error');
+        return;
+      }
+
+      const response = await fetch('/api/improveProposal', {
         method: 'POST',
-        body: { 
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
           tenderId: proposal.tenderId, 
           proposalContent: content 
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to improve proposal');
+      }
+
+      const result = await response.json();
       
       setContent(result.improvedContent);
       setHasUnsavedChanges(true);
@@ -246,10 +338,27 @@ export default function ProposalEditorPage() {
   const handleSubmitProposal = async () => {
     try {
       setIsSubmitting(true);
-      const result = await api('/api/submitProposal', {
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        addToast('Please log in to submit proposal', 'error');
+        return;
+      }
+
+      const response = await fetch('/api/submitProposal', {
         method: 'POST',
-        body: { proposalId: id }
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ proposalId: id })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit proposal');
+      }
+
+      const result = await response.json();
       
       addToast(`Proposal submitted! Transaction ID: ${result.txId}`, 'success');
       router.push('/reputation');
@@ -357,7 +466,7 @@ export default function ProposalEditorPage() {
               <div className="text-gray-600 mb-6 space-y-2">
                 <p>This proposal doesn't exist or may have been removed.</p>
                 <p className="text-sm">
-                  <strong>Note:</strong> In development mode, proposals are stored in memory and are reset when the server restarts.
+                  <strong>Note:</strong> Proposals are now stored in Supabase database.
                 </p>
               </div>
               

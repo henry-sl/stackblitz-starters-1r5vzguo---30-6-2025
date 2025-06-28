@@ -1,10 +1,10 @@
 // pages/api/saveDraft.js
-// This API endpoint saves updates to a proposal draft
-// It uses the updateProposal function from the store module
+// This API endpoint saves updates to a proposal draft in Supabase
+// Updated to use Supabase instead of local store
 
-import { updateProposal } from '../../lib/store';
+import { supabase } from '../../lib/supabaseClient';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,15 +18,36 @@ export default function handler(req, res) {
   }
 
   try {
-    // Update the proposal with new content
-    const updatedProposal = updateProposal(proposalId, { 
-      content,
-      updatedAt: new Date().toISOString()
-    });
+    // Get the user from the request
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No authorization token provided' });
+    }
+
+    // Get user from token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Update the proposal with new content in Supabase
+    const { data: updatedProposal, error } = await supabase
+      .from('proposals')
+      .update({ 
+        content,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', proposalId)
+      .eq('user_id', user.id) // Ensure user can only update their own proposals
+      .select()
+      .single();
     
-    // Return 404 if proposal not found
-    if (!updatedProposal) {
-      return res.status(404).json({ error: 'Proposal not found' });
+    if (error) {
+      if (error.code === 'PGRST116') { // Not found error
+        return res.status(404).json({ error: 'Proposal not found' });
+      }
+      console.error('Error updating proposal:', error);
+      return res.status(500).json({ error: 'Failed to save draft' });
     }
 
     // Return success response

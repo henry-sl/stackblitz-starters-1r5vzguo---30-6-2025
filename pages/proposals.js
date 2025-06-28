@@ -1,6 +1,6 @@
 // pages/proposals.js
 // Proposals listing page showing all user proposals with status and actions
-// Provides clear guidance when no proposals exist
+// Updated to work with Supabase authentication
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
@@ -15,7 +15,7 @@ import {
   PlusIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { getAllProposals } from '../lib/store';
+import { supabase } from '../lib/supabaseClient';
 
 export default function ProposalsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -40,9 +40,26 @@ export default function ProposalsPage() {
   const loadProposals = async () => {
     try {
       setLoading(true);
-      // Get all proposals from the store
-      const allProposals = getAllProposals();
-      setProposals(allProposals);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No session available');
+        return;
+      }
+
+      const response = await fetch('/api/proposals', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch proposals');
+      }
+
+      const data = await response.json();
+      setProposals(data);
     } catch (error) {
       console.error('Error loading proposals:', error);
     } finally {
@@ -189,9 +206,9 @@ export default function ProposalsPage() {
             <div className="flex items-start space-x-2">
               <ExclamationTriangleIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-left">
-                <h4 className="text-sm font-medium text-blue-900 mb-1">Development Note</h4>
+                <h4 className="text-sm font-medium text-blue-900 mb-1">Database Migration Complete</h4>
                 <p className="text-sm text-blue-800">
-                  Proposals are stored in memory during development and will be reset when the server restarts.
+                  Proposals are now stored in Supabase database and will persist across sessions.
                 </p>
               </div>
             </div>
