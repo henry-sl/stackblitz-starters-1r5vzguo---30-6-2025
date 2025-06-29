@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     let proposalContent;
 
     // If no API key, create a dummy proposal content for testing
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       proposalContent = 
         `# Proposal for ${tender.title}\n\n` +
         `## Executive Summary\n\n` +
@@ -82,34 +82,33 @@ export default async function handler(req, res) {
         `${profile.name} Team\n\n` +
         `*(This is an AI-generated proposal based on your company profile)*`;
     } else {
-      // Use Claude AI to generate a proposal
+      // Use OpenAI to generate a proposal
       try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01'
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
           },
           body: JSON.stringify({
-            model: "claude-3-sonnet-20240229",
-            max_tokens: 1500,
-            temperature: 0.7,
+            model: "gpt-4o",
             messages: [
               {
                 role: "user",
                 content: `You are a professional proposal writer. Write a compelling proposal for the following tender, highlighting the company's qualifications and addressing the tender requirements.\n\nTender:\nTitle: ${tender.title}\nDescription: ${tender.description}\nAgency: ${tender.agency}\nCategory: ${tender.category}\n\nCompany:\nName: ${profile.name}\nCertifications: ${profile.certifications?.join(', ') || 'None'}\nExperience: ${profile.experience}\n\nThe proposal should be well-structured with sections like Executive Summary, Company Overview, Approach, and Conclusion. Use a professional tone and format it with markdown headers.`
               }
-            ]
+            ],
+            max_tokens: 1500,
+            temperature: 0.7
           })
         });
 
         if (!response.ok) {
-          throw new Error(`Anthropic API error: ${response.status}`);
+          throw new Error(`OpenAI API error: ${response.status}`);
         }
 
         const data = await response.json();
-        proposalContent = data.content[0].text.trim();
+        proposalContent = data.choices[0].message.content.trim();
       } catch (aiError) {
         console.error("AI generation error:", aiError);
         // Fall back to dummy content if AI fails

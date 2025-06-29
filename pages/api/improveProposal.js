@@ -55,8 +55,8 @@ export default async function handler(req, res) {
       `Company: ${profile.name}\nExperience: ${profile.experience}\nCertifications: ${profile.certifications?.join(', ') || 'None'}` :
       'Company profile not available';
 
-    // Mock AI improvement (in real app, would use Claude/GPT API)
-    if (!process.env.ANTHROPIC_API_KEY) {
+    // Mock AI improvement (in real app, would use OpenAI API)
+    if (!process.env.OPENAI_API_KEY) {
       // Simulate AI improvement with enhanced content
       const improvedContent = proposalContent
         .replace(/\[Your Company Name\]/g, profile?.name || 'Your Company Name')
@@ -91,19 +91,16 @@ Our key strengths include:
       });
     }
 
-    // Use Claude AI for real improvement (when API key is available)
+    // Use OpenAI for real improvement (when API key is available)
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "claude-3-sonnet-20240229",
-          max_tokens: 2000,
-          temperature: 0.7,
+          model: "gpt-4o",
           messages: [
             {
               role: "user",
@@ -128,16 +125,18 @@ Please improve the proposal by:
 
 Return the improved proposal content.`
             }
-          ]
+          ],
+          max_tokens: 2000,
+          temperature: 0.7
         })
       });
 
       if (!response.ok) {
-        throw new Error(`AI API error: ${response.status}`);
+        throw new Error(`OpenAI API error: ${response.status}`);
       }
 
       const data = await response.json();
-      const improvedContent = data.content[0].text.trim();
+      const improvedContent = data.choices[0].message.content.trim();
       
       return res.status(200).json({ 
         improvedContent,

@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     }
 
     // If no API key (development), return a mock response
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       const mockSummary = `This tender from ${tender.agency} seeks qualified contractors for ${tender.title.toLowerCase()}. ` +
         `The project involves comprehensive ${tender.category?.toLowerCase()} services with specific certification and experience requirements. ` +
         `Successful bidders must demonstrate relevant expertise and meet all technical specifications outlined in the tender documentation.`;
@@ -44,34 +44,33 @@ export default async function handler(req, res) {
       });
     }
 
-    // Use Claude AI to generate a summary (when API key is available)
+    // Use OpenAI to generate a summary (when API key is available)
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "claude-3-sonnet-20240229",
-          max_tokens: 300,
-          temperature: 0.3,
+          model: "gpt-4o",
           messages: [
             {
               role: "user",
               content: `Please summarize the following tender in 3-4 sentences, focusing on the key points and requirements.\n\nTender Title: "${tender.title}"\nTender Description: "${tender.description}"\nAgency: "${tender.agency}"\nCategory: "${tender.category}"`
             }
-          ]
+          ],
+          max_tokens: 300,
+          temperature: 0.3
         })
       });
 
       if (!response.ok) {
-        throw new Error(`Anthropic API error: ${response.status}`);
+        throw new Error(`OpenAI API error: ${response.status}`);
       }
 
       const data = await response.json();
-      const summaryText = data.content[0].text.trim();
+      const summaryText = data.choices[0].message.content.trim();
       
       return res.status(200).json({ summary: summaryText });
     } catch (aiError) {

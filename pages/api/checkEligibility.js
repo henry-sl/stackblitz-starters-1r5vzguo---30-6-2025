@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     }
 
     // Mock response for local dev (no API key)
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       // Generate mock eligibility based on tender category
       let mockEligibility = [];
       
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ eligibility: mockEligibility });
     }
 
-    // Use Claude AI to analyze eligibility (when API key is available)
+    // Use OpenAI to analyze eligibility (when API key is available)
     try {
       // Build structured prompt with tender + profile info for AI analysis
       const tenderText = `Title: ${tender.title}\nDescription: ${tender.description}\nCategory: ${tender.category}\nRequirements: ${tender.requirements?.join(', ') || 'See description'}`;
@@ -95,35 +95,34 @@ export default async function handler(req, res) {
         `Certifications: ${profile.certifications?.join(', ') || 'None'}\n` +
         `Experience: ${profile.experience || 'Not provided'}`;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "claude-3-sonnet-20240229",
-          max_tokens: 500,
-          temperature: 0.5,
+          model: "gpt-4o",
           messages: [
             {
               role: "user",
               content: `Determine if the company is eligible for the tender. List key requirements from the tender and whether the company meets each.\n\nTender Details:\n${tenderText}\n\nCompany Profile:\n${profileText}\n\nProvide the answer as a JSON array of objects with "requirement" and "eligible" fields. Example: [{"requirement": "5+ years experience", "eligible": true}]`
             }
-          ]
+          ],
+          max_tokens: 500,
+          temperature: 0.5
         })
       });
 
       if (!response.ok) {
-        throw new Error(`Anthropic API error: ${response.status}`);
+        throw new Error(`OpenAI API error: ${response.status}`);
       }
 
       const data = await response.json();
       let eligibilityList;
       
       try {
-        const responseText = data.content[0].text;
+        const responseText = data.choices[0].message.content;
         // Try to extract JSON from the response
         const jsonMatch = responseText.match(/\[.*\]/s);
         if (jsonMatch) {
