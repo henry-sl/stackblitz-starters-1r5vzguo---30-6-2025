@@ -211,7 +211,7 @@ export default function ProposalAIAssistant({
 
       <CardContent className="flex-1 flex flex-col p-0">
         {/* Quick Actions */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-50">
           <p className="text-xs font-medium text-gray-700 mb-2">Quick Actions:</p>
           <div className="flex flex-wrap gap-2">
             {quickActions.map((action, index) => (
@@ -295,7 +295,7 @@ export default function ProposalAIAssistant({
         </div>
 
         {/* Chat Input */}
-        <div className="p-4 border-t border-gray-200 bg-white">
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white">
           <div className="flex items-end space-x-3">
             <div className="flex-1">
               <Input
