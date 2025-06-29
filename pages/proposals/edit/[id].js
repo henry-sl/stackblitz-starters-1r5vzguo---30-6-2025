@@ -71,7 +71,9 @@ export default function ProposalEditorPage() {
   );
 
   const loadProposal = async () => {
-    if (!id || isNaN(Number(id))) {
+    // Updated validation: Only check if ID exists, not if it's a valid number
+    // This allows UUID strings to pass validation
+    if (!id) {
       setError('invalid_id');
       setLoading(false);
       return;
@@ -372,7 +374,7 @@ export default function ProposalEditorPage() {
               <div className="text-gray-600 mb-6 space-y-2">
                 <p>This proposal doesn't exist or may have been removed.</p>
                 <p className="text-sm">
-                  <strong>Note:</strong> In development mode, proposals are stored in memory and are reset when the server restarts.
+                  <strong>Note:</strong> Proposals are now stored in the Supabase database and should persist across sessions.
                 </p>
               </div>
               
