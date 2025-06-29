@@ -18,7 +18,7 @@ function sanitizeJsonString(str) {
     .replace(/\b/g, '\\b');  // Escape backspaces
 }
 
-// Ultra-conservative language detection function
+// ULTRA-CONSERVATIVE language detection function
 function detectLanguage(text) {
   if (!text || typeof text !== 'string') return 'en';
   
@@ -36,85 +36,90 @@ function detectLanguage(text) {
   
   console.log(`[Language Detection] Analyzing ${words.length} words from: "${text.substring(0, 150)}..."`);
   
-  // ULTRA-SPECIFIC Malay indicators (words that are NEVER used in English business contexts)
-  const strongMalayIndicators = {
-    // Malay-only words with very high confidence
-    'adalah': 10, 'dengan': 10, 'untuk': 10, 'dalam': 10, 'pada': 10, 'dari': 10, 'yang': 10,
-    'akan': 10, 'telah': 10, 'sudah': 10, 'belum': 10, 'tidak': 10, 'bukan': 10,
-    'kami': 10, 'kita': 10, 'mereka': 10, 'anda': 10, 'saya': 10,
-    'syarikat': 10, 'projek': 8, 'cadangan': 10, 'kepada': 10, 'daripada': 10,
-    'keperluan': 10, 'pengalaman': 8, 'perkhidmatan': 10, 'penyelenggaraan': 10,
-    'pembinaan': 8, 'kerajaan': 10, 'kontrak': 6, 'latar': 10, 'belakang': 8,
-    'sijil': 10, 'pensijilan': 10, 'ringkasan': 10, 'eksekutif': 6,
-    'bahagian': 10, 'diperkukuhkan': 15, 'disusun': 10, 'semula': 10,
-    'maklumat': 10, 'tambahan': 10, 'mengenai': 10, 'meningkatkan': 10,
-    'kredibiliti': 10, 'menunjukkan': 10, 'kesesuaian': 10, 'menggunakan': 10,
-    'bahasa': 10, 'perniagaan': 10, 'formal': 6, 'persepsi': 10, 'positif': 6,
-    'terhadap': 10, 'komitmen': 8, 'standard': 6, 'tinggi': 8,
-    'diperbaiki': 10, 'ditambah': 10, 'dipertingkatkan': 10, 'diperkemas': 10,
-    'menyeluruh': 10, 'berkesan': 10, 'berkualiti': 10, 'profesional': 6,
-    'memastikan': 10, 'menyediakan': 10, 'melaksanakan': 10, 'mencapai': 10
+  // EXTREMELY SPECIFIC Malay indicators - words that NEVER appear in English business contexts
+  const ultraSpecificMalayWords = {
+    // Core Malay function words that are impossible in English
+    'adalah': 15, 'dengan': 15, 'untuk': 15, 'dalam': 15, 'pada': 15, 'dari': 15, 'yang': 15,
+    'akan': 15, 'telah': 15, 'sudah': 15, 'belum': 15, 'tidak': 15, 'bukan': 15,
+    'kami': 15, 'kita': 15, 'mereka': 15, 'anda': 15, 'saya': 15,
+    'kepada': 15, 'daripada': 15, 'mengenai': 15, 'terhadap': 15,
+    
+    // Malay-specific business terms
+    'syarikat': 20, 'cadangan': 20, 'keperluan': 20, 'perkhidmatan': 20, 'penyelenggaraan': 20,
+    'pembinaan': 15, 'kerajaan': 20, 'latar': 15, 'belakang': 10, 'sijil': 20, 'pensijilan': 20,
+    'ringkasan': 20, 'eksekutif': 10, 'bahagian': 20, 'maklumat': 20, 'tambahan': 15,
+    'meningkatkan': 20, 'kredibiliti': 20, 'menunjukkan': 20, 'kesesuaian': 20,
+    'menggunakan': 20, 'bahasa': 15, 'perniagaan': 20, 'persepsi': 20, 'positif': 8,
+    'komitmen': 12, 'standard': 8, 'tinggi': 12, 'memastikan': 20, 'menyediakan': 20,
+    'melaksanakan': 20, 'mencapai': 20, 'berkesan': 20, 'berkualiti': 20, 'profesional': 8,
+    
+    // Malay improvement-specific terms
+    'diperkukuhkan': 25, 'diperbaiki': 25, 'ditambah': 25, 'dipertingkatkan': 25, 
+    'diperkemas': 25, 'menyeluruh': 20, 'panel': 8, 'penilai': 15
   };
   
-  // ULTRA-SPECIFIC English indicators (words that are NEVER used in Malay business contexts)
-  const strongEnglishIndicators = {
-    // English-only words with very high confidence
-    'the': 10, 'and': 10, 'with': 10, 'for': 10, 'from': 10, 'that': 10, 'this': 10,
-    'will': 10, 'has': 10, 'have': 10, 'not': 10, 'also': 10, 'only': 10, 'can': 10,
-    'they': 10, 'our': 10, 'you': 10, 'your': 10, 'his': 10, 'her': 10, 'its': 10, 'their': 10,
-    'company': 8, 'project': 6, 'proposal': 8, 'requirements': 10, 'experience': 6,
-    'services': 8, 'maintenance': 8, 'construction': 6, 'government': 8, 'contract': 6,
-    'background': 8, 'certifications': 10, 'executive': 6, 'summary': 8,
-    'enhanced': 10, 'strengthened': 10, 'reorganized': 10, 'additional': 10,
-    'information': 8, 'about': 10, 'increase': 8, 'credibility': 8,
-    'demonstrate': 10, 'suitability': 10, 'using': 10, 'language': 6,
-    'business': 6, 'formal': 6, 'perception': 10, 'positive': 6,
-    'towards': 10, 'commitment': 6, 'standards': 6, 'high': 8,
-    'we': 10, 'are': 10, 'is': 10, 'to': 10, 'of': 10, 'in': 10, 'on': 10,
-    'as': 10, 'be': 10, 'by': 10, 'at': 10, 'an': 10, 'or': 10, 'if': 10,
-    'improved': 10, 'better': 10, 'comprehensive': 10, 'ensure': 10,
-    'provide': 10, 'implement': 10, 'achieve': 10, 'deliver': 10
+  // EXTREMELY SPECIFIC English indicators - words that NEVER appear in Malay business contexts
+  const ultraSpecificEnglishWords = {
+    // Core English function words that are impossible in Malay
+    'the': 15, 'and': 15, 'with': 15, 'for': 15, 'from': 15, 'that': 15, 'this': 15,
+    'will': 15, 'has': 15, 'have': 15, 'not': 15, 'also': 15, 'only': 15, 'can': 15,
+    'they': 15, 'our': 15, 'you': 15, 'your': 15, 'his': 15, 'her': 15, 'its': 15, 'their': 15,
+    'we': 15, 'are': 15, 'is': 15, 'to': 15, 'of': 15, 'in': 15, 'on': 15,
+    'as': 15, 'be': 15, 'by': 15, 'at': 15, 'an': 15, 'or': 15, 'if': 15,
+    'about': 15, 'towards': 15, 'using': 15, 'ensure': 15, 'provide': 15, 
+    'implement': 15, 'achieve': 15, 'deliver': 15,
+    
+    // English-specific business terms
+    'company': 12, 'proposal': 15, 'requirements': 20, 'services': 15, 'maintenance': 15,
+    'construction': 12, 'government': 15, 'background': 12, 'certifications': 20,
+    'executive': 10, 'summary': 15, 'enhanced': 20, 'strengthened': 20, 'reorganized': 20,
+    'additional': 15, 'information': 12, 'increase': 15, 'credibility': 15,
+    'demonstrate': 20, 'suitability': 20, 'language': 10, 'business': 10,
+    'perception': 20, 'commitment': 12, 'standards': 12, 'improved': 20, 'better': 15,
+    'comprehensive': 20
   };
   
-  // Count weighted word matches
+  // Count weighted word matches with stricter thresholds
   let malayScore = 0;
   let englishScore = 0;
   let malayWordCount = 0;
   let englishWordCount = 0;
   
   words.forEach(word => {
-    if (strongMalayIndicators[word]) {
-      malayScore += strongMalayIndicators[word];
+    if (ultraSpecificMalayWords[word]) {
+      malayScore += ultraSpecificMalayWords[word];
       malayWordCount++;
     }
-    if (strongEnglishIndicators[word]) {
-      englishScore += strongEnglishIndicators[word];
+    if (ultraSpecificEnglishWords[word]) {
+      englishScore += ultraSpecificEnglishWords[word];
       englishWordCount++;
     }
   });
   
-  // Ultra-specific pattern matching for Malay
+  // ULTRA-SPECIFIC pattern matching for Malay (only the most distinctive patterns)
   const textLower = cleanText;
   
-  // VERY STRONG Malay patterns (almost impossible to appear in English)
-  if (textLower.includes('telah diperkukuhkan') || textLower.includes('telah ditambah')) malayScore += 25;
-  if (textLower.includes('yang telah') || textLower.includes('yang akan')) malayScore += 20;
-  if (textLower.includes('kami adalah') || textLower.includes('syarikat kami')) malayScore += 20;
-  if (textLower.includes('dengan pengalaman') || textLower.includes('dalam bidang')) malayScore += 15;
-  if (textLower.includes('kepada panel') || textLower.includes('panel penilai')) malayScore += 20;
-  if (textLower.includes('bahasa malaysia') || textLower.includes('bahasa melayu')) malayScore += 25;
+  // EXTREMELY STRONG Malay patterns (virtually impossible in English)
+  if (textLower.includes('telah diperkukuhkan') || textLower.includes('telah ditambah')) malayScore += 30;
+  if (textLower.includes('yang telah') || textLower.includes('yang akan')) malayScore += 25;
+  if (textLower.includes('kami adalah') || textLower.includes('syarikat kami')) malayScore += 25;
+  if (textLower.includes('dengan pengalaman') || textLower.includes('dalam bidang')) malayScore += 20;
+  if (textLower.includes('kepada panel') || textLower.includes('panel penilai')) malayScore += 25;
+  if (textLower.includes('bahasa malaysia') || textLower.includes('bahasa melayu')) malayScore += 30;
+  if (textLower.includes('diperkukuhkan dengan') || textLower.includes('ditambah bahagian')) malayScore += 30;
   
-  // VERY STRONG English patterns (almost impossible to appear in Malay)
-  if (textLower.includes('we are pleased') || textLower.includes('our company')) englishScore += 20;
-  if (textLower.includes('the company') || textLower.includes('the project')) englishScore += 15;
-  if (textLower.includes('has been') || textLower.includes('have been')) englishScore += 15;
-  if (textLower.includes('will be') || textLower.includes('can be')) englishScore += 12;
-  if (textLower.includes('is a leading') || textLower.includes('are a leading')) englishScore += 15;
-  if (textLower.includes('look forward') || textLower.includes('thank you')) englishScore += 15;
+  // EXTREMELY STRONG English patterns (virtually impossible in Malay)
+  if (textLower.includes('we are pleased') || textLower.includes('our company')) englishScore += 25;
+  if (textLower.includes('the company') || textLower.includes('the project')) englishScore += 20;
+  if (textLower.includes('has been') || textLower.includes('have been')) englishScore += 20;
+  if (textLower.includes('will be') || textLower.includes('can be')) englishScore += 18;
+  if (textLower.includes('is a leading') || textLower.includes('are a leading')) englishScore += 20;
+  if (textLower.includes('look forward') || textLower.includes('thank you')) englishScore += 20;
+  if (textLower.includes('enhanced with') || textLower.includes('strengthened with')) englishScore += 25;
   
-  // Business entity indicators (very low weight to avoid false positives)
-  if (textLower.includes('sdn bhd') || textLower.includes('berhad')) malayScore += 2;
-  if (textLower.includes('ltd') || textLower.includes('limited') || textLower.includes('inc')) englishScore += 2;
+  // Business entity indicators (minimal weight)
+  if (textLower.includes('sdn bhd') || textLower.includes('berhad')) malayScore += 1;
+  if (textLower.includes('ltd') || textLower.includes('limited') || textLower.includes('inc')) englishScore += 1;
   
   // Calculate percentages and word density
   const totalScore = malayScore + englishScore;
@@ -127,26 +132,30 @@ function detectLanguage(text) {
   console.log(`  - Malay indicators: ${malayWordCount} words, score: ${malayScore}, density: ${malayDensity.toFixed(1)}%`);
   console.log(`  - English indicators: ${englishWordCount} words, score: ${englishScore}, density: ${englishDensity.toFixed(1)}%`);
   
-  // ULTRA-CONSERVATIVE decision logic
-  // Require VERY strong evidence for Malay classification
+  // EXTREMELY CONSERVATIVE decision logic
+  // Require OVERWHELMING evidence for Malay classification
   
   // If very few total indicators, default to English
-  if (totalScore < 10) {
+  if (totalScore < 15) {
     console.log(`[Language Detection] Very low confidence (score: ${totalScore}), defaulting to English`);
     return 'en';
   }
   
-  // Require at least 3 strong Malay indicators AND significant score dominance
-  if (malayWordCount >= 3 && malayScore > englishScore * 2 && malayScore >= 30) {
-    console.log(`[Language Detection] Strong Malay evidence: ${malayWordCount} indicators, score ${malayScore} vs ${englishScore}`);
+  // Require at least 4 strong Malay indicators AND massive score dominance AND high density
+  if (malayWordCount >= 4 && 
+      malayScore > englishScore * 3 && 
+      malayScore >= 50 && 
+      malayDensity >= 8) {
+    console.log(`[Language Detection] OVERWHELMING Malay evidence: ${malayWordCount} indicators, score ${malayScore} vs ${englishScore}, density ${malayDensity.toFixed(1)}%`);
     return 'ms';
   }
   
   // For all other cases, default to English
   console.log(`[Language Detection] Insufficient Malay evidence, defaulting to English`);
-  console.log(`  - Malay word count: ${malayWordCount} (need ≥3)`);
-  console.log(`  - Malay score: ${malayScore} (need ≥30 and >2x English)`);
+  console.log(`  - Malay word count: ${malayWordCount} (need ≥4)`);
+  console.log(`  - Malay score: ${malayScore} (need ≥50 and >3x English)`);
   console.log(`  - English score: ${englishScore}`);
+  console.log(`  - Malay density: ${malayDensity.toFixed(1)}% (need ≥8%)`);
   
   return 'en';
 }
