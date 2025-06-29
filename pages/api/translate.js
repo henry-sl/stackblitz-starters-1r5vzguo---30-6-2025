@@ -1,6 +1,19 @@
 // pages/api/translate.js
-// API endpoint for Malay-English translation using Google Translate API
+// API endpoint for Malay-English translation using Lingo.dev SDK
 // Handles bidirectional translation between English and Bahasa Malaysia
+
+import { LingoDotDevEngine } from "lingo.dev/sdk";
+
+// Initialize Lingo.dev engine globally to reuse across requests
+let lingoEngine;
+
+if (process.env.LINGODEV_API_KEY) {
+  lingoEngine = new LingoDotDevEngine({
+    apiKey: process.env.LINGODEV_API_KEY,
+  });
+} else {
+  console.warn("LINGODEV_API_KEY is not set. Lingo.dev translation will use mock data.");
+}
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -15,41 +28,50 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing text or targetLang' });
   }
 
-  // For now, return a mock translation since we don't have a working translation service
-  // In production, you would integrate with Google Translate API, Azure Translator, or similar
   try {
-    console.log(`[Translation API] Mock translating to ${targetLang}:`, text.substring(0, 100) + '...');
-    
     // Determine source language if not provided
-    const sourceLanguage = sourceLang || (targetLang === 'ms' ? 'en' : 'ms');
-    
-    console.log(`[Translation API] Source: ${sourceLanguage}, Target: ${targetLang}`);
+    const determinedSourceLang = sourceLang || (targetLang === 'ms' ? 'en' : 'en');
 
-    // Mock translation - in production, replace with actual translation service
-    let mockTranslation;
-    if (targetLang === 'ms') {
-      // English to Malay mock translation
-      mockTranslation = `[Terjemahan Bahasa Malaysia] ${text}`;
-    } else {
-      // Malay to English mock translation
-      mockTranslation = `[English Translation] ${text}`;
+    if (!lingoEngine) {
+      // Fallback to mock translation if API key is not set
+      let mockTranslation;
+      if (targetLang === 'ms') {
+        mockTranslation = `[Terjemahan Bahasa Malaysia] ${text}`;
+      } else {
+        mockTranslation = `[English Translation] ${text}`;
+      }
+      return res.status(200).json({
+        translatedText: mockTranslation,
+        sourceLanguage: determinedSourceLang,
+        targetLanguage: targetLang,
+        originalLength: text.length,
+        translatedLength: mockTranslation.length,
+        note: "This is a mock translation because LINGODEV_API_KEY is not set."
+      });
     }
 
-    console.log(`[Translation API] Mock translation successful, length: ${mockTranslation.length}`);
+    console.log(`[Translation API] Translating from ${determinedSourceLang} to ${targetLang}:`, text.substring(0, 100) + '...');
+    
+    const translationResult = await lingoEngine.translate({
+      text,
+      sourceLang: determinedSourceLang,
+      targetLang,
+    });
+
+    console.log(`[Translation API] Lingo.dev translation successful, length: ${translationResult.translatedText.length}`);
 
     return res.status(200).json({
-      translatedText: mockTranslation,
-      sourceLanguage,
+      translatedText: translationResult.translatedText,
+      sourceLanguage: determinedSourceLang,
       targetLanguage: targetLang,
       originalLength: text.length,
-      translatedLength: mockTranslation.length,
-      note: "This is a mock translation. Please integrate with a real translation service for production use."
+      translatedLength: translationResult.translatedText.length,
+      note: "Translation powered by Lingo.dev SDK."
     });
 
   } catch (error) {
     console.error('[Translation API] Translation error:', error);
     
-    // Generic error response
     return res.status(500).json({ 
       error: 'Translation failed',
       details: error.message || 'Unknown error occurred'
