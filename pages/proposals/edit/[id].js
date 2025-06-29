@@ -1,6 +1,5 @@
 // pages/proposals/edit/[id].js
-// Enhanced proposal editor page with comprehensive editor functionality
-// Provides rich text editing, autosave, export capabilities, and full-screen mode
+// Enhanced proposal editor page with database integration for versioning and quick insert
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -31,6 +30,7 @@ export default function ProposalEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCreatingProposal, setIsCreatingProposal] = useState(false);
+  const [companyProfile, setCompanyProfile] = useState(null);
 
   // Editor state
   const [content, setContent] = useState('');
@@ -58,6 +58,13 @@ export default function ProposalEditorPage() {
     }
   }, [id, user, authLoading]);
 
+  // Load company profile for quick insert
+  useEffect(() => {
+    if (user) {
+      loadCompanyProfile();
+    }
+  }, [user]);
+
   // Fetch tender details using proposal's tenderId
   const { data: tender } = useSWR(
     proposal?.tenderId ? `/api/tenders/${proposal.tenderId}` : null,
@@ -65,7 +72,7 @@ export default function ProposalEditorPage() {
   );
 
   // Fetch version history
-  const { data: versions } = useSWR(
+  const { data: versions, mutate: mutateVersions } = useSWR(
     id ? `/api/versions/${id}` : null,
     fetcher
   );
@@ -90,6 +97,16 @@ export default function ProposalEditorPage() {
       setError('not_found');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCompanyProfile = async () => {
+    try {
+      const profile = await api('/api/company');
+      setCompanyProfile(profile);
+    } catch (error) {
+      console.error('Error loading company profile:', error);
+      // Don't show error for missing profile, just log it
     }
   };
 
@@ -145,11 +162,14 @@ export default function ProposalEditorPage() {
       setSaveStatus('saved');
       setLastSaved(new Date().toISOString());
       setHasUnsavedChanges(false);
+      
+      // Refresh version history after saving
+      mutateVersions();
     } catch (error) {
       setSaveStatus('error');
       console.error('Autosave failed:', error);
     }
-  }, [id, content, user, hasUnsavedChanges]);
+  }, [id, content, user, hasUnsavedChanges, mutateVersions]);
 
   // Autosave timer
   useEffect(() => {
@@ -263,12 +283,19 @@ export default function ProposalEditorPage() {
     }
   };
 
-  // Insert company information
+  // Insert company information using database data
   const insertCompanyInfo = (section) => {
+    if (!companyProfile) {
+      addToast('Company profile not loaded. Please complete your profile first.', 'error');
+      return;
+    }
+
     const companyInfo = {
-      background: "\n\n**Company Background:**\nTechBuild Solutions Sdn Bhd is a leading construction and technology company with over 12 years of experience in delivering complex infrastructure projects. We have successfully completed more than 50 government and private sector projects, including office buildings, data centers, and smart city initiatives.\n\n",
-      certifications: "\n\n**Certifications:**\n- ISO 9001:2015 Quality Management\n- ISO 14001:2015 Environmental Management\n- OHSAS 18001 Occupational Health & Safety\n- Valid Contractor License Grade A\n- 150+ certified professionals on staff\n\n",
-      experience: "\n\n**Recent Projects:**\n- Smart City Infrastructure Project (2023) - RM 8.5M\n- Government Office Complex (2022) - RM 12.3M\n- Digital Infrastructure Upgrade (2021) - RM 6.8M\n- Sustainable Building Initiative (2020) - RM 15.2M\n\n"
+      background: `\n\n**Company Background:**\n${companyProfile.name} is ${companyProfile.experience || 'a professional company with extensive experience in our field'}.\n\n`,
+      certifications: `\n\n**Certifications:**\n${companyProfile.certifications && companyProfile.certifications.length > 0 
+        ? companyProfile.certifications.map(cert => `- ${cert}`).join('\n') 
+        : '- Professional certifications available upon request'}\n\n`,
+      experience: `\n\n**Company Experience:**\n${companyProfile.experience || 'Our company brings extensive experience and proven capabilities to this project.'}\n\n`
     };
 
     const insertion = companyInfo[section] || "";
@@ -562,7 +589,7 @@ export default function ProposalEditorPage() {
                   size="sm" 
                   className="w-full justify-start"
                   onClick={() => insertCompanyInfo('background')}
-                  disabled={isSubmitted}
+                  disabled={isSubmitted || !companyProfile}
                 >
                   Company Background
                 </Button>
@@ -571,7 +598,7 @@ export default function ProposalEditorPage() {
                   size="sm" 
                   className="w-full justify-start"
                   onClick={() => insertCompanyInfo('certifications')}
-                  disabled={isSubmitted}
+                  disabled={isSubmitted || !companyProfile}
                 >
                   Certifications
                 </Button>
@@ -580,10 +607,15 @@ export default function ProposalEditorPage() {
                   size="sm" 
                   className="w-full justify-start"
                   onClick={() => insertCompanyInfo('experience')}
-                  disabled={isSubmitted}
+                  disabled={isSubmitted || !companyProfile}
                 >
                   Past Experience
                 </Button>
+                {!companyProfile && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Complete your company profile to enable quick insert
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -598,10 +630,10 @@ export default function ProposalEditorPage() {
               <CardContent>
                 <div className="space-y-3">
                   {versions && versions.length > 0 ? (
-                    versions.map((version) => (
+                    versions.slice(0, 5).map((version) => (
                       <div key={version.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
                         <div>
-                          <p className="text-sm font-medium">{version.label || `Version ${version.version}`}</p>
+                          <p className="text-sm font-medium">Version {version.version}</p>
                           <p className="text-xs text-gray-500">{format(new Date(version.createdAt), "MMM d, HH:mm")}</p>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -612,6 +644,7 @@ export default function ProposalEditorPage() {
                   ) : (
                     <div className="text-center py-4">
                       <p className="text-sm text-gray-500">No versions yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Versions are created when you save drafts</p>
                     </div>
                   )}
                 </div>
@@ -681,11 +714,11 @@ export default function ProposalEditorPage() {
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-gray-500">Budget:</span>
-                      <p className="font-semibold">RM 2,500,000</p>
+                      <p className="font-semibold">{tender.budget || 'Not specified'}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Closing:</span>
-                      <p className="font-semibold">Feb 15, 2025</p>
+                      <p className="font-semibold">{tender.closingDate ? format(new Date(tender.closingDate), "MMM d, yyyy") : 'Not specified'}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Category:</span>

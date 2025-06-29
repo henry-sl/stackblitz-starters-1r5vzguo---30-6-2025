@@ -1,5 +1,5 @@
 // pages/api/saveDraft.js
-// API endpoint for saving proposal draft updates to Supabase database
+// API endpoint for saving proposal draft updates to Supabase database with versioning
 
 import { createClient } from '@supabase/supabase-js';
 import { proposalOperations } from '../../lib/database';
@@ -53,6 +53,19 @@ export default async function handler(req, res) {
     
     if (!updatedProposal) {
       return res.status(404).json({ error: 'Proposal not found or access denied' });
+    }
+
+    // Save a new version of the proposal
+    try {
+      await proposalOperations.saveVersion(
+        supabase,
+        proposalId,
+        content,
+        'Draft saved'
+      );
+    } catch (versionError) {
+      console.warn('Failed to save version:', versionError);
+      // Don't fail the entire request if versioning fails
     }
 
     // Return success response
