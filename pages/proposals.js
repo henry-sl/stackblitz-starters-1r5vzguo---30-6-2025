@@ -1,6 +1,7 @@
 // pages/proposals.js
 // Proposals listing page using Supabase data with SWR
 // Added delete functionality for draft proposals with confirmation modal
+// Fixed to close modal immediately upon confirmation to prevent UI errors
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -54,6 +55,10 @@ export default function ProposalsPage() {
   const handleConfirmDelete = async () => {
     if (!proposalToDelete) return;
 
+    // Close modal and clear state IMMEDIATELY to prevent UI issues
+    setShowDeleteModal(false);
+    setProposalToDelete(null);
+
     try {
       setIsDeleting(true);
       
@@ -72,10 +77,8 @@ export default function ProposalsPage() {
         addToast('Failed to delete proposal', 'error');
       }
     } finally {
-      // Always reset modal state and refresh data, regardless of success or failure
+      // Reset loading state and refresh data
       setIsDeleting(false);
-      setShowDeleteModal(false);
-      setProposalToDelete(null);
       // Always refresh the proposals list to sync with database state
       mutate();
     }
