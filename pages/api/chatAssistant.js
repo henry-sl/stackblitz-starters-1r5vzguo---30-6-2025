@@ -1,5 +1,5 @@
 // pages/api/chatAssistant.js
-// API endpoint for AI chat assistance in both proposal editor and tender details
+// API endpoint for AI chat assistance in proposal editor
 
 import { createClient } from '@supabase/supabase-js';
 import { tenderOperations, companyOperations } from '../../lib/database';
@@ -57,25 +57,18 @@ export default async function handler(req, res) {
       
       const lowerMessage = userMessage.toLowerCase();
       
-      if (lowerMessage.includes('summarize') || lowerMessage.includes('summary')) {
-        aiResponse = `Here's a summary of this tender: "${tender.title}" by ${tender.agency} is a ${tender.category} project with a budget of ${tender.budget || 'unspecified amount'}. The tender closes ${tender.closingDate ? `on ${new Date(tender.closingDate).toLocaleDateString()}` : 'soon'}. Key focus areas include the scope outlined in the description. Would you like me to analyze specific requirements?`;
-      } else if (lowerMessage.includes('requirement') || lowerMessage.includes('criteria') || lowerMessage.includes('eligibility')) {
-        const requirements = tender.requirements || ['technical expertise', 'relevant experience', 'compliance certifications'];
-        aiResponse = `Based on the tender requirements, the key criteria include: ${requirements.slice(0, 3).join(', ')}. ${profile ? `Your company profile shows ${profile.certifications?.length || 0} certifications and relevant experience.` : 'Complete your company profile to get a detailed eligibility assessment.'} Would you like me to help you address any specific requirement?`;
+      if (lowerMessage.includes('requirement') || lowerMessage.includes('criteria')) {
+        aiResponse = `Based on the tender requirements, the key criteria include: ${tender.requirements?.slice(0, 3).join(', ') || 'technical expertise, relevant experience, and compliance certifications'}. Would you like me to help you address any specific requirement in your proposal?`;
       } else if (lowerMessage.includes('budget') || lowerMessage.includes('cost') || lowerMessage.includes('price')) {
-        aiResponse = `The tender budget is ${tender.budget || 'not specified in the public information'}. For competitive positioning, I recommend researching similar projects and ensuring your pricing reflects the value you provide. ${tender.category === 'Construction' ? 'For construction projects, consider material costs, labor, equipment, and contingencies.' : 'Make sure to account for all project phases and deliverables.'} Would you like help with pricing strategy?`;
+        aiResponse = `The tender budget is ${tender.budget || 'not specified'}. I recommend structuring your pricing to be competitive while ensuring you can deliver quality work. Would you like help with the pricing section of your proposal?`;
       } else if (lowerMessage.includes('experience') || lowerMessage.includes('qualification')) {
-        aiResponse = `${profile ? `Your company has ${profile.experience ? 'documented experience' : 'capabilities'} that could align with this tender.` : 'To provide specific advice, please complete your company profile first.'} For this ${tender.category} tender, emphasize relevant past projects, certifications, and team expertise. ${profile?.certifications?.length ? `Your ${profile.certifications.length} certifications` : 'Industry certifications'} will strengthen your position. Shall I help you structure this section?`;
-      } else if (lowerMessage.includes('strategy') || lowerMessage.includes('win') || lowerMessage.includes('competitive')) {
-        aiResponse = `For winning this ${tender.category} tender, I recommend: 1) Clearly demonstrate how you meet all requirements, 2) Highlight unique value propositions, 3) Show relevant experience and successful outcomes, 4) Provide competitive but realistic pricing, 5) Ensure compliance with all submission requirements. ${tender.agency} likely values ${tender.category === 'Construction' ? 'safety, quality, and on-time delivery' : 'innovation, reliability, and cost-effectiveness'}. What specific aspect would you like to focus on?`;
+        aiResponse = `Your company has ${profile?.experience ? 'relevant experience' : 'capabilities'} that align with this tender. I suggest highlighting your ${profile?.certifications?.length ? 'certifications and' : ''} past projects in the proposal. Shall I help you draft that section?`;
+      } else if (lowerMessage.includes('improve') || lowerMessage.includes('better') || lowerMessage.includes('enhance')) {
+        aiResponse = `I can help improve your proposal by strengthening the executive summary, adding more specific details about your approach, or better aligning with the tender requirements. What specific area would you like to focus on?`;
       } else if (lowerMessage.includes('deadline') || lowerMessage.includes('timeline') || lowerMessage.includes('schedule')) {
-        const closingDate = tender.closingDate ? new Date(tender.closingDate) : null;
-        const daysLeft = closingDate ? Math.ceil((closingDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
-        aiResponse = `${closingDate ? `The tender closes on ${closingDate.toLocaleDateString()}${daysLeft ? ` (${daysLeft} days from now)` : ''}` : 'The closing date is not specified in the available information'}. ${daysLeft && daysLeft <= 7 ? 'This is a tight deadline - prioritize completing your proposal quickly.' : 'You have time to prepare a thorough proposal.'} I recommend creating a submission checklist and working backwards from the deadline. Would you like help planning your proposal timeline?`;
-      } else if (lowerMessage.includes('competition') || lowerMessage.includes('competitor')) {
-        aiResponse = `For ${tender.category} tenders like this, competition typically comes from established firms with relevant experience. Key differentiators often include: specialized expertise, proven track record, competitive pricing, and strong project management capabilities. ${tender.agency} as the client likely prioritizes ${tender.category === 'IT Services' ? 'technical innovation and security' : tender.category === 'Construction' ? 'safety and quality delivery' : 'reliability and value for money'}. Focus on what makes your approach unique. What's your main competitive advantage?`;
+        aiResponse = `The tender closing date is ${tender.closingDate ? new Date(tender.closingDate).toLocaleDateString() : 'not specified'}. Make sure to submit well before the deadline. Would you like help with the project timeline section?`;
       } else {
-        aiResponse = `I understand you're asking about "${userMessage}". Based on this ${tender.category} tender from ${tender.agency}, I can help you with analysis, strategy, requirements clarification, or proposal guidance. ${tender.budget ? `With a budget of ${tender.budget}, this is a significant opportunity.` : ''} Could you be more specific about what aspect you'd like help with? I can assist with eligibility, competitive positioning, proposal strategy, or technical requirements.`;
+        aiResponse = `I understand you're asking about "${userMessage}". Based on the tender details and your company profile, I'd recommend focusing on your strengths and how they align with the project requirements. Could you be more specific about what aspect you'd like help with?`;
       }
       
       return res.status(200).json({ 
@@ -92,8 +85,7 @@ export default async function handler(req, res) {
           agency: tender.agency,
           category: tender.category,
           budget: tender.budget,
-          requirements: tender.requirements,
-          closingDate: tender.closingDate
+          requirements: tender.requirements
         },
         company: {
           name: profile?.name,
@@ -134,7 +126,7 @@ export default async function handler(req, res) {
       console.error('AI chat error:', aiError);
       // Fall back to mock response
       return res.status(200).json({ 
-        response: "I'm here to help with your tender analysis and proposal questions. Could you please rephrase your question? I can assist with requirements analysis, eligibility checks, competitive strategy, or proposal guidance."
+        response: "I'm here to help with your proposal. Could you please rephrase your question? I can assist with requirements analysis, proposal structure, or specific content suggestions."
       });
     }
   } catch (error) {
