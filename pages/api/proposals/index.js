@@ -18,16 +18,16 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No authorization token provided' });
     }
 
-    // Validate environment variables
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // Validate environment variables - check both client and server-side variables
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceRoleKey) {
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
     // Create Supabase client with service role key
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify the JWT token and get user information
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
