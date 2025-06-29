@@ -2,7 +2,7 @@
 // Main container component for the proposal editor
 // Orchestrates all editor components and manages state
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AutosaveIndicator from './AutosaveIndicator';
 import ToolbarSection from './ToolbarSection';
 import ContentArea from './ContentArea';
@@ -21,6 +21,7 @@ export default function EditorContainer({
   const [saveStatus, setSaveStatus] = useState('saved');
   const [lastSaved, setLastSaved] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const contentAreaRef = useRef(null);
 
   // Autosave functionality
   const saveContent = useCallback(async () => {
@@ -91,7 +92,7 @@ export default function EditorContainer({
 
   // Insert formatting at cursor position
   const insertFormatting = (before, after = '') => {
-    const textarea = document.querySelector('textarea');
+    const textarea = contentAreaRef.current;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -101,11 +102,13 @@ export default function EditorContainer({
     
     handleContentChange(newContent);
     
-    // Restore cursor position
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, end + before.length);
-    }, 0);
+    // Use requestAnimationFrame instead of setTimeout for better DOM manipulation
+    requestAnimationFrame(() => {
+      if (textarea && textarea.focus && textarea.setSelectionRange) {
+        textarea.focus();
+        textarea.setSelectionRange(start + before.length, end + before.length);
+      }
+    });
   };
 
   // Manual save
@@ -172,6 +175,7 @@ export default function EditorContainer({
 
       {/* Content Area */}
       <ContentArea
+        ref={contentAreaRef}
         content={content}
         onChange={handleContentChange}
         readOnly={readOnly}

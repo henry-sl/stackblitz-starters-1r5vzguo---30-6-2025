@@ -2,17 +2,20 @@
 // Main content editing area for proposals with rich text capabilities
 // Handles text input, formatting, and content management with resizable and full-screen support
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, forwardRef } from 'react';
 
-export default function ContentArea({ 
+const ContentArea = forwardRef(function ContentArea({ 
   content, 
   onChange, 
   onSelectionChange,
   readOnly = false,
   placeholder = "Start writing your proposal...",
   isFullScreen = false
-}) {
+}, ref) {
   const editorRef = useRef(null);
+
+  // Expose the textarea ref to parent component
+  React.useImperativeHandle(ref, () => editorRef.current);
 
   // Handle content changes
   const handleInput = (e) => {
@@ -55,10 +58,12 @@ export default function ContentArea({
       const newContent = content.substring(0, start) + '    ' + content.substring(end);
       onChange(newContent);
       
-      // Restore cursor position
-      setTimeout(() => {
-        e.target.selectionStart = e.target.selectionEnd = start + 4;
-      }, 0);
+      // Use requestAnimationFrame instead of setTimeout for better DOM manipulation
+      requestAnimationFrame(() => {
+        if (editorRef.current && editorRef.current.setSelectionRange) {
+          editorRef.current.selectionStart = editorRef.current.selectionEnd = start + 4;
+        }
+      });
     }
   };
 
@@ -105,4 +110,6 @@ export default function ContentArea({
       </div>
     </div>
   );
-}
+});
+
+export default ContentArea;
