@@ -18,46 +18,92 @@ function sanitizeJsonString(str) {
     .replace(/\b/g, '\\b');  // Escape backspaces
 }
 
-// Helper function to detect language of content
+// Enhanced language detection function
 function detectLanguage(text) {
   if (!text || typeof text !== 'string') return 'en';
   
-  // Common Malay words and patterns
+  // Clean text for analysis
+  const cleanText = text.toLowerCase().replace(/[^\w\s]/g, ' ');
+  
+  // More comprehensive Malay words and patterns
   const malayWords = [
+    // Common words
     'dan', 'atau', 'dengan', 'untuk', 'dalam', 'pada', 'dari', 'ke', 'yang', 'adalah',
     'akan', 'telah', 'sudah', 'belum', 'tidak', 'bukan', 'juga', 'hanya', 'dapat',
+    'ini', 'itu', 'mereka', 'kami', 'kita', 'saya', 'anda', 'dia', 'ia',
+    // Business/tender specific
     'syarikat', 'projek', 'cadangan', 'kepada', 'daripada', 'keperluan', 'pengalaman',
-    'perkhidmatan', 'penyelenggaraan', 'pembinaan', 'kerajaan', 'tender', 'kontrak'
+    'perkhidmatan', 'penyelenggaraan', 'pembinaan', 'kerajaan', 'tender', 'kontrak',
+    'latar', 'belakang', 'sijil', 'pensijilan', 'ringkasan', 'eksekutif',
+    'bahagian', 'diperkukuhkan', 'disusun', 'semula', 'maklumat', 'tambahan',
+    'mengenai', 'meningkatkan', 'kredibiliti', 'menunjukkan', 'kesesuaian',
+    'menggunakan', 'bahasa', 'perniagaan', 'formal', 'persepsi', 'positif',
+    'terhadap', 'komitmen', 'standard', 'tinggi'
   ];
   
-  // Common English words
+  // More comprehensive English words
   const englishWords = [
+    // Common words
     'the', 'and', 'or', 'with', 'for', 'in', 'on', 'from', 'to', 'that', 'is',
-    'will', 'has', 'have', 'not', 'also', 'only', 'can', 'company', 'project',
-    'proposal', 'requirements', 'experience', 'services', 'maintenance', 'construction',
-    'government', 'tender', 'contract'
+    'will', 'has', 'have', 'not', 'also', 'only', 'can', 'this', 'they', 'we',
+    'our', 'you', 'your', 'his', 'her', 'its', 'their',
+    // Business/tender specific
+    'company', 'project', 'proposal', 'requirements', 'experience', 'services',
+    'maintenance', 'construction', 'government', 'tender', 'contract',
+    'background', 'certifications', 'executive', 'summary', 'enhanced',
+    'strengthened', 'reorganized', 'additional', 'information', 'about',
+    'increase', 'credibility', 'demonstrate', 'suitability', 'using',
+    'language', 'business', 'formal', 'perception', 'positive', 'towards',
+    'commitment', 'standards', 'high'
   ];
   
-  const lowerText = text.toLowerCase();
-  
-  // Count matches for each language
-  let malayCount = 0;
-  let englishCount = 0;
+  // Count word matches with higher weight for longer words
+  let malayScore = 0;
+  let englishScore = 0;
   
   malayWords.forEach(word => {
     const regex = new RegExp(`\\b${word}\\b`, 'g');
-    const matches = lowerText.match(regex);
-    if (matches) malayCount += matches.length;
+    const matches = cleanText.match(regex);
+    if (matches) {
+      // Give higher weight to longer, more specific words
+      const weight = word.length > 5 ? 2 : 1;
+      malayScore += matches.length * weight;
+    }
   });
   
   englishWords.forEach(word => {
     const regex = new RegExp(`\\b${word}\\b`, 'g');
-    const matches = lowerText.match(regex);
-    if (matches) englishCount += matches.length;
+    const matches = cleanText.match(regex);
+    if (matches) {
+      // Give higher weight to longer, more specific words
+      const weight = word.length > 5 ? 2 : 1;
+      englishScore += matches.length * weight;
+    }
   });
   
-  // Return detected language based on word count
-  return malayCount > englishCount ? 'ms' : 'en';
+  // Additional checks for language patterns
+  
+  // Check for Malay-specific patterns
+  if (cleanText.includes('sdn bhd') || cleanText.includes('berhad')) malayScore += 3;
+  if (cleanText.includes('yang') && cleanText.includes('adalah')) malayScore += 2;
+  if (cleanText.includes('kepada') || cleanText.includes('daripada')) malayScore += 2;
+  
+  // Check for English-specific patterns
+  if (cleanText.includes('ltd') || cleanText.includes('limited') || cleanText.includes('inc')) englishScore += 3;
+  if (cleanText.includes('the') && cleanText.includes('and')) englishScore += 2;
+  if (cleanText.includes('we are') || cleanText.includes('our company')) englishScore += 2;
+  
+  console.log(`[Language Detection] Malay score: ${malayScore}, English score: ${englishScore}`);
+  
+  // Return detected language with a minimum threshold
+  if (malayScore > englishScore && malayScore > 2) {
+    return 'ms';
+  } else if (englishScore > malayScore && englishScore > 2) {
+    return 'en';
+  } else {
+    // Default to English if scores are too close or too low
+    return 'en';
+  }
 }
 
 export default async function handler(req, res) {
@@ -107,34 +153,29 @@ export default async function handler(req, res) {
 
     // Detect the language of the input content
     const detectedLanguage = detectLanguage(proposalContent);
-    console.log(`[Improve Proposal] Detected language: ${detectedLanguage}`);
+    console.log(`[Improve Proposal] Detected language: ${detectedLanguage} for content: "${proposalContent.substring(0, 100)}..."`);
 
     // Mock AI improvement (preserves input language)
     if (!process.env.OPENAI_API_KEY) {
-      // Create improved content in the same language as input
       let improvedContent;
+      let insights;
       
       if (detectedLanguage === 'ms') {
         // Input is in Malay, improve in Malay
-        improvedContent = `# Cadangan untuk ${tender.title}
-
-## Ringkasan Eksekutif
-
-Dengan hormatnya, ${profile?.name || 'syarikat kami'} ingin mengemukakan cadangan komprehensif untuk "${tender.title}" seperti yang diiklankan oleh ${tender.agency}. Dengan rekod prestasi yang terbukti dan kepakaran khusus dalam bidang ${tender.category?.toLowerCase()}, kami yakin dapat menyampaikan hasil yang cemerlang dan melebihi jangkaan sambil memastikan pematuhan penuh kepada semua keperluan yang ditetapkan.
-
-Pendekatan kami menggabungkan amalan terbaik industri dengan penyelesaian inovatif, disokong oleh pasukan berpengalaman dan komitmen terhadap kecemerlangan kualiti. Kami memahami kepentingan kritikal projek ini dan bersedia untuk menumpukan sepenuh sumber kami bagi memastikan penyiapan yang berjaya dalam tempoh masa dan bajet yang ditetapkan.
-
-## Latar Belakang Syarikat
-
-${profile?.name || 'Syarikat kami'} membawa pengalaman luas dan keupayaan terbukti untuk projek ini. ${profile?.experience || 'Kami telah berjaya menyiapkan banyak projek serupa dengan hasil yang cemerlang.'} Pasukan profesional bertauliah kami komited untuk menyampaikan kerja berkualiti tinggi yang memenuhi standard industri tertinggi.
+        improvedContent = proposalContent
+          .replace(/\*\*Latar Belakang Syarikat:\*\*/g, '**Latar Belakang Syarikat:**')
+          .replace(/\*\*Sijil:\*\*/g, '**Pensijilan dan Kelayakan:**')
+          .replace(/\*\*Pengalaman Syarikat:\*\*/g, '**Pengalaman dan Kepakaran Syarikat:**')
+          + `
 
 ## Pendekatan Teknikal
 
-Kami mencadangkan pendekatan menyeluruh yang menangani semua keperluan teknikal sambil memastikan kualiti, pematuhan jadual masa, dan keberkesanan kos.
+Kami mencadangkan pendekatan menyeluruh yang menangani semua keperluan teknikal sambil memastikan kualiti, pematuhan jadual masa, dan keberkesanan kos. Metodologi kami merangkumi:
 
-## Kelayakan
-
-Pensijilan kami termasuk: ${profile?.certifications?.join(', ') || 'Pelbagai pensijilan industri'}
+- Perancangan projek terperinci dan penilaian risiko
+- Jaminan kualiti dan pematuhan kepada semua standard
+- Pelaporan kemajuan berkala dan komunikasi pihak berkepentingan
+- Sokongan dan penyelenggaraan selepas pelaksanaan
 
 ## Kesimpulan
 
@@ -142,27 +183,45 @@ Kami berharap dapat peluang untuk membincangkan cadangan kami secara terperinci 
 
 Yang benar,
 Pasukan ${profile?.name || 'Syarikat Kami'}`;
+
+        insights = [
+          {
+            change: "Diperkukuhkan bahagian latar belakang syarikat",
+            explanation: "Bahagian latar belakang syarikat telah diperkukuhkan dengan maklumat yang lebih terperinci tentang pengalaman dan keupayaan syarikat. Ini memberikan keyakinan kepada panel penilai tentang kredibiliti dan kesesuaian syarikat untuk projek ini."
+          },
+          {
+            change: "Ditambah bahagian pendekatan teknikal",
+            explanation: "Bahagian pendekatan teknikal yang baru ditambah menunjukkan metodologi yang jelas dan terstruktur. Ini membantu panel penilai memahami bagaimana syarikat akan melaksanakan projek dengan jayanya."
+          },
+          {
+            change: "Diperbaiki struktur dan format dokumen",
+            explanation: "Struktur dokumen telah diperbaiki dengan penggunaan tajuk yang lebih jelas dan format yang konsisten. Ini meningkatkan kebolehbacaan dan profesionalisme cadangan."
+          }
+        ];
       } else {
         // Input is in English, improve in English
-        improvedContent = `# Proposal for ${tender.title}
-
-## Executive Summary
-
-We are pleased to submit our comprehensive proposal for "${tender.title}" as advertised by ${tender.agency}. With our proven track record and specialized expertise in ${tender.category?.toLowerCase()}, we are confident in our ability to deliver exceptional results that exceed expectations while ensuring full compliance with all specified requirements.
-
-Our approach combines industry best practices with innovative solutions, backed by our experienced team and commitment to quality excellence. We understand the critical importance of this project and are prepared to dedicate our full resources to ensure successful completion within the specified timeline and budget.
-
-## Company Background
-
-${profile?.name || 'Our company'} brings extensive experience and proven capabilities to this project. ${profile?.experience || 'We have successfully completed numerous similar projects with excellent results.'} Our team of certified professionals is committed to delivering high-quality work that meets the highest industry standards.
+        improvedContent = proposalContent
+          .replace(/\*\*Company Background:\*\*/g, '**Company Background and Expertise:**')
+          .replace(/\*\*Certifications:\*\*/g, '**Certifications and Qualifications:**')
+          .replace(/\*\*Company Experience:\*\*/g, '**Company Experience and Capabilities:**')
+          + `
 
 ## Technical Approach
 
-We propose a comprehensive approach that addresses all technical requirements while ensuring quality, timeline adherence, and cost-effectiveness.
+We propose a comprehensive approach that addresses all technical requirements while ensuring quality, timeline adherence, and cost-effectiveness. Our methodology includes:
 
-## Qualifications
+- Detailed project planning and risk assessment
+- Quality assurance and compliance with all standards
+- Regular progress reporting and stakeholder communication
+- Post-implementation support and maintenance
 
-Our certifications include: ${profile?.certifications?.join(', ') || 'Various industry certifications'}
+## Project Management
+
+Our proven project management framework ensures successful delivery:
+- Dedicated project manager with relevant experience
+- Clear communication channels and regular updates
+- Proactive risk management and mitigation strategies
+- Adherence to agreed timelines and budget constraints
 
 ## Conclusion
 
@@ -170,26 +229,22 @@ We look forward to the opportunity to discuss our proposal in detail and demonst
 
 Sincerely,
 ${profile?.name || 'Our Company'} Team`;
-      }
 
-      const insights = [
-        {
-          change: "Diperkukuhkan bahagian ringkasan eksekutif",
-          explanation: "Ringkasan eksekutif yang lebih kuat akan memberikan kesan pertama yang baik kepada panel penilai dan menunjukkan kefahaman mendalam terhadap keperluan projek. Penggunaan bahasa yang sesuai dengan konteks tender meningkatkan profesionalisme cadangan."
-        },
-        {
-          change: "Ditambah baik bahagian latar belakang syarikat dengan butiran khusus",
-          explanation: "Menyerlahkan kekuatan syarikat dengan lebih jelas akan membantu panel penilai memahami keupayaan dan pengalaman yang relevan. Penyenaraian kekuatan utama dalam format yang mudah dibaca meningkatkan kesan visual cadangan."
-        },
-        {
-          change: "Diperhalusi pendekatan teknikal dengan metodologi yang jelas",
-          explanation: "Pendekatan teknikal yang terstruktur menunjukkan profesionalisme dan perancangan yang teliti. Ini memberikan keyakinan kepada panel penilai bahawa syarikat mempunyai strategi yang jelas untuk melaksanakan projek dengan jayanya."
-        },
-        {
-          change: `Digunakan bahasa ${detectedLanguage === 'ms' ? 'Bahasa Malaysia' : 'Inggeris'} yang konsisten`,
-          explanation: `Mengekalkan bahasa asal kandungan (${detectedLanguage === 'ms' ? 'Bahasa Malaysia' : 'Inggeris'}) memastikan konsistensi dan mengelakkan kekeliruan. Penambahbaikan dibuat dalam bahasa yang sama untuk mengekalkan konteks dan nuansa yang betul.`
-        }
-      ];
+        insights = [
+          {
+            change: "Enhanced company background section",
+            explanation: "The company background section has been strengthened with more detailed information about experience and capabilities. This provides confidence to the evaluation panel about the company's credibility and suitability for this project."
+          },
+          {
+            change: "Added technical approach section",
+            explanation: "A new technical approach section has been added to demonstrate clear and structured methodology. This helps the evaluation panel understand how the company will successfully execute the project."
+          },
+          {
+            change: "Improved document structure and formatting",
+            explanation: "The document structure has been improved with clearer headings and consistent formatting. This enhances readability and professionalism of the proposal."
+          }
+        ];
+      }
 
       return res.status(200).json({ 
         improvedContent,
@@ -297,8 +352,8 @@ ${profile?.name || 'Our Company'} Team`;
           improvedContent: responseText,
           insights: [
             {
-              change: "Kandungan telah diperbaiki oleh AI",
-              explanation: "AI telah membuat penambahbaikan umum kepada cadangan berdasarkan konteks tender dan profil syarikat. Respons AI tidak dapat diproses sepenuhnya tetapi kandungan telah diperbaiki."
+              change: "Content has been improved by AI",
+              explanation: "AI has made general improvements to the proposal based on tender context and company profile. The AI response could not be fully processed but the content has been enhanced."
             }
           ],
           validation: 'fallback'
@@ -308,12 +363,18 @@ ${profile?.name || 'Our Company'} Team`;
       console.error('AI improvement error:', aiError);
       // Fall back to preserving original content with language detection
       const detectedLang = detectLanguage(proposalContent);
+      const fallbackMessage = detectedLang === 'ms' 
+        ? '\n\n*Perkhidmatan penambahbaikan AI tidak tersedia buat masa ini*'
+        : '\n\n*AI improvement service temporarily unavailable*';
+        
       return res.status(200).json({ 
-        improvedContent: proposalContent + `\n\n*Perkhidmatan penambahbaikan AI tidak tersedia buat masa ini*`,
+        improvedContent: proposalContent + fallbackMessage,
         insights: [
           {
-            change: "Perkhidmatan AI tidak tersedia",
-            explanation: `Sistem AI mengalami masalah teknikal. Kandungan asal dalam bahasa ${detectedLang === 'ms' ? 'Bahasa Malaysia' : 'Inggeris'} telah dikekalkan. Sila cuba lagi kemudian atau hubungi sokongan teknikal.`
+            change: detectedLang === 'ms' ? "Perkhidmatan AI tidak tersedia" : "AI service unavailable",
+            explanation: detectedLang === 'ms' 
+              ? `Sistem AI mengalami masalah teknikal. Kandungan asal dalam bahasa ${detectedLang === 'ms' ? 'Bahasa Malaysia' : 'Inggeris'} telah dikekalkan. Sila cuba lagi kemudian atau hubungi sokongan teknikal.`
+              : `The AI system experienced technical issues. Original content in ${detectedLang === 'ms' ? 'Bahasa Malaysia' : 'English'} has been preserved. Please try again later or contact technical support.`
           }
         ]
       });
