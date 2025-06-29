@@ -1,6 +1,6 @@
 // pages/tenders/[id].js
-// Updated tender details page with new modern design
-// Converted from React Router to Next.js routing
+// Updated tender details page with translation functionality
+// Added Lingo.dev integration for Malay-English translation
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import TranslationButton from '../../components/Translation/TranslationButton';
 import { useToast } from '../../hooks/useToast';
 import { 
   ArrowLeft, 
@@ -24,7 +25,8 @@ import {
   Play,
   Download,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Languages
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 
@@ -45,7 +47,7 @@ export default function TenderDetails() {
     fetcher
   );
 
-  // Mock AI functions (in real app, these would call actual AI APIs)
+  // AI functions
   const generateAISummary = async () => {
     try {
       setIsGeneratingSummary(true);
@@ -86,7 +88,6 @@ export default function TenderDetails() {
         body: { tenderId: id }
       });
       addToast('Proposal draft created!', 'success');
-      // Fixed: Navigate to the correct proposal editor path
       router.push(`/proposals/edit/${result.proposalId}`);
     } catch (error) {
       addToast('Failed to generate proposal', 'error');
@@ -227,13 +228,23 @@ export default function TenderDetails() {
               {/* AI Summary Result */}
               {aiSummary && (
                 <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
-                  <h4 className="font-semibold text-blue-900 mb-2 flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span>AI Summary</span>
-                    <Button variant="ghost" size="sm" className="ml-auto">
-                      <Play className="w-4 h-4" />
-                    </Button>
-                  </h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-blue-900 flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4" />
+                      <span>AI Summary</span>
+                    </h4>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="ghost" size="sm">
+                        <Play className="w-4 h-4" />
+                      </Button>
+                      <TranslationButton
+                        text={aiSummary}
+                        targetLang="ms"
+                        buttonText="Translate to Malay"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
                   <p className="text-gray-700 text-sm leading-relaxed">{aiSummary}</p>
                 </div>
               )}
@@ -279,7 +290,15 @@ export default function TenderDetails() {
               
               <TabsContent value="description" className="p-6">
                 <div className="prose max-w-none">
-                  <h3 className="text-lg font-semibold mb-4">Project Description</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Project Description</h3>
+                    <TranslationButton
+                      text={tender.description}
+                      targetLang="en"
+                      buttonText="Translate to English"
+                      variant="outline"
+                    />
+                  </div>
                   <div className="whitespace-pre-line text-gray-700 leading-relaxed">
                     {tender.description}
                   </div>
@@ -329,6 +348,44 @@ export default function TenderDetails() {
               <div>
                 <label className="text-sm font-medium text-gray-500">Category</label>
                 <p className="text-gray-900">{tender.category}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Translation Tools */}
+          <Card className="border-purple-200 bg-purple-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-purple-900">
+                <Languages className="w-5 h-5" />
+                <span>Translation Tools</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-purple-700 mb-4">
+                Translate tender content between English and Bahasa Malaysia
+              </p>
+              
+              <TranslationButton
+                text={tender.title}
+                targetLang="en"
+                buttonText="Translate Title to English"
+                variant="outline"
+                className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+              />
+              
+              <TranslationButton
+                text={tender.description}
+                targetLang="en"
+                buttonText="Translate Description to English"
+                variant="outline"
+                className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+              />
+              
+              <div className="pt-2 border-t border-purple-200">
+                <p className="text-xs text-purple-600">
+                  <strong>Tip:</strong> Official submissions must be in Bahasa Malaysia. 
+                  Use translation when preparing your proposal.
+                </p>
               </div>
             </CardContent>
           </Card>

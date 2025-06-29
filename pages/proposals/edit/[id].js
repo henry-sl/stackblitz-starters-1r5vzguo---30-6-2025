@@ -1,6 +1,6 @@
 // pages/proposals/edit/[id].js
-// Enhanced proposal editor page with database integration for versioning and quick insert
-// Autosave disabled, version viewing enabled
+// Enhanced proposal editor page with translation integration
+// Added Lingo.dev translation panel for Malay-English support
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -14,11 +14,12 @@ import AutosaveIndicator from '../../../components/ProposalEditor/AutosaveIndica
 import ToolbarSection from '../../../components/ProposalEditor/ToolbarSection';
 import ContentArea from '../../../components/ProposalEditor/ContentArea';
 import ExportControls from '../../../components/ProposalEditor/ExportControls';
+import TranslationPanel from '../../../components/Translation/TranslationPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize } from 'lucide-react';
+import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize, Languages } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function ProposalEditorPage() {
@@ -41,6 +42,10 @@ export default function ProposalEditorPage() {
   const [isGeneratingImprovement, setIsGeneratingImprovement] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  
+  // Translation state
+  const [showTranslationPanel, setShowTranslationPanel] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState('');
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -79,8 +84,6 @@ export default function ProposalEditorPage() {
   );
 
   const loadProposal = async () => {
-    // Updated validation: Only check if ID exists, not if it's a valid number
-    // This allows UUID strings to pass validation
     if (!id) {
       setError('invalid_id');
       setLoading(false);
@@ -107,7 +110,6 @@ export default function ProposalEditorPage() {
       setCompanyProfile(profile);
     } catch (error) {
       console.error('Error loading company profile:', error);
-      // Don't show error for missing profile, just log it
     }
   };
 
@@ -116,7 +118,6 @@ export default function ProposalEditorPage() {
     try {
       setIsCreatingProposal(true);
       
-      // Get the first available tender
       const tenders = await api('/api/tenders');
       if (!tenders || tenders.length === 0) {
         addToast('No tenders available to create a proposal for', 'error');
@@ -125,13 +126,11 @@ export default function ProposalEditorPage() {
 
       const firstTender = tenders[0];
       
-      // Generate a proposal for the first tender
       const result = await api('/api/generateProposal', {
         method: 'POST',
         body: { tenderId: firstTender.id }
       });
 
-      // Redirect to the new proposal editor
       router.push(`/proposals/edit/${result.proposalId}`);
       addToast('New proposal created successfully!', 'success');
     } catch (error) {
@@ -148,7 +147,7 @@ export default function ProposalEditorPage() {
     loadProposal();
   };
 
-  // Manual save functionality (autosave disabled)
+  // Manual save functionality
   const saveContent = useCallback(async () => {
     if (!id || !user || !hasUnsavedChanges) return;
 
@@ -164,24 +163,12 @@ export default function ProposalEditorPage() {
       setLastSaved(new Date().toISOString());
       setHasUnsavedChanges(false);
       
-      // Refresh version history after saving
       mutateVersions();
     } catch (error) {
       setSaveStatus('error');
       console.error('Save failed:', error);
     }
   }, [id, content, user, hasUnsavedChanges, mutateVersions]);
-
-  // AUTOSAVE DISABLED: Commented out the autosave timer
-  // useEffect(() => {
-  //   if (!hasUnsavedChanges || !user) return;
-
-  //   const timer = setTimeout(() => {
-  //     saveContent();
-  //   }, 2000);
-
-  //   return () => clearTimeout(timer);
-  // }, [content, hasUnsavedChanges, saveContent, user]);
 
   // Handle content changes
   const handleContentChange = (newContent) => {
@@ -325,6 +312,20 @@ export default function ProposalEditorPage() {
     setIsFullScreen(!isFullScreen);
   };
 
+  // Handle translated content
+  const handleTranslatedContentChange = (newTranslatedContent) => {
+    setTranslatedContent(newTranslatedContent);
+  };
+
+  // Use translated content as main content
+  const useTranslatedContent = () => {
+    if (translatedContent) {
+      setContent(translatedContent);
+      setHasUnsavedChanges(true);
+      addToast('Translated content loaded into editor', 'success');
+    }
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -332,12 +333,10 @@ export default function ProposalEditorPage() {
         e.preventDefault();
         handleManualSave();
       }
-      // F11 or Ctrl+Shift+F for full screen
       if (e.key === 'F11' || (e.ctrlKey && e.shiftKey && e.key === 'F')) {
         e.preventDefault();
         toggleFullScreen();
       }
-      // Escape to exit full screen
       if (e.key === 'Escape' && isFullScreen) {
         setIsFullScreen(false);
       }
@@ -451,16 +450,6 @@ export default function ProposalEditorPage() {
                 </div>
               </div>
               
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left max-w-md mx-auto">
-                <h4 className="text-sm font-medium text-amber-900 mb-2">Alternative: Create from tender</h4>
-                <ol className="text-sm text-amber-800 space-y-1 list-decimal list-inside">
-                  <li>Browse available tenders</li>
-                  <li>Click on a tender to view details</li>
-                  <li>Use the "Generate Proposal" button</li>
-                  <li>Edit your proposal in the editor</li>
-                </ol>
-              </div>
-              
               <div className="flex space-x-3 justify-center">
                 <button onClick={() => router.back()} className="btn btn-secondary">
                   Go Back
@@ -554,6 +543,15 @@ export default function ProposalEditorPage() {
                   <Button 
                     variant="outline" 
                     size="sm"
+                    onClick={() => setShowTranslationPanel(!showTranslationPanel)}
+                    className={showTranslationPanel ? 'bg-purple-50 text-purple-700' : ''}
+                  >
+                    <Languages className="w-4 h-4 mr-2" />
+                    Translate
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
                     onClick={toggleFullScreen}
                     title={isFullScreen ? 'Exit Full Screen (Esc)' : 'Full Screen (F11)'}
                   >
@@ -581,6 +579,27 @@ export default function ProposalEditorPage() {
               />
             </CardContent>
           </Card>
+
+          {/* Translation Panel */}
+          {showTranslationPanel && !isFullScreen && (
+            <div className="mt-6">
+              <TranslationPanel
+                originalContent={content}
+                onTranslatedContentChange={handleTranslatedContentChange}
+                originalLanguage="en"
+              />
+              {translatedContent && (
+                <div className="mt-4 flex justify-end">
+                  <Button 
+                    onClick={useTranslatedContent}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    Use Translated Content
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sidebar - hidden in full screen */}
