@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
-    "@lingodev/sdk": "^1.0.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-navigation-menu": "^1.2.13",
     "@radix-ui/react-slot": "^1.2.3",
