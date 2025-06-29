@@ -52,20 +52,20 @@ export default async function handler(req, res) {
 
     console.log(`[Translation API] Translating from ${determinedSourceLang} to ${targetLang}:`, text.substring(0, 100) + '...');
     
-    const translationResult = await lingoEngine.translate({
-      text,
-      sourceLang: determinedSourceLang,
-      targetLang,
+    // Use the correct Lingo.dev SDK method: localizeText
+    const translationResult = await lingoEngine.localizeText(text, {
+      sourceLocale: determinedSourceLang,
+      targetLocale: targetLang,
     });
 
-    console.log(`[Translation API] Lingo.dev translation successful, length: ${translationResult.translatedText.length}`);
+    console.log(`[Translation API] Lingo.dev translation successful, length: ${translationResult.length}`);
 
     return res.status(200).json({
-      translatedText: translationResult.translatedText,
+      translatedText: translationResult,
       sourceLanguage: determinedSourceLang,
       targetLanguage: targetLang,
       originalLength: text.length,
-      translatedLength: translationResult.translatedText.length,
+      translatedLength: translationResult.length,
       note: "Translation powered by Lingo.dev SDK."
     });
 
