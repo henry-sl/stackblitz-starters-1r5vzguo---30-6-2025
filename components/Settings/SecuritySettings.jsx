@@ -3,14 +3,16 @@
 // Integrates with Supabase authentication system
 
 import React, { useState } from 'react';
-import { ShieldCheckIcon, KeyIcon, DevicePhoneMobileIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/router';
+import { ShieldCheckIcon, KeyIcon, DevicePhoneMobileIcon, ExclamationTriangleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function SecuritySettings() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { addToast } = useToast();
+  const router = useRouter();
   
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -21,6 +23,7 @@ export default function SecuritySettings() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Handle password change using Supabase
   const handlePasswordChange = async (e) => {
@@ -58,6 +61,20 @@ export default function SecuritySettings() {
         : 'Two-factor authentication enabled', 
       'success'
     );
+  };
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      setSigningOut(true);
+      await signOut();
+      addToast('Signed out successfully', 'success');
+      router.push('/login');
+    } catch (error) {
+      addToast('Failed to sign out', 'error');
+    } finally {
+      setSigningOut(false);
+    }
   };
 
   return (
@@ -213,6 +230,36 @@ export default function SecuritySettings() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Sign Out Section */}
+      <div className="border border-red-200 rounded-lg p-6 bg-red-50">
+        <div className="flex items-center space-x-3 mb-4">
+          <ArrowRightOnRectangleIcon className="h-5 w-5 text-red-600" />
+          <h4 className="text-md font-medium text-red-800">Sign Out</h4>
+        </div>
+        
+        <p className="text-sm text-red-700 mb-4">
+          Sign out of your Tenderly account. You will need to log in again to access your account.
+        </p>
+        
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {signingOut ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Signing Out...
+            </>
+          ) : (
+            <>
+              <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
+              Sign Out
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
