@@ -1,6 +1,6 @@
 // pages/api/improveProposal.js
 // API endpoint for AI-powered proposal improvement using structured prompts
-// Enhanced language detection with better accuracy
+// Enhanced language detection with ultra-conservative Malay detection
 
 import { createClient } from '@supabase/supabase-js';
 import { tenderOperations, companyOperations } from '../../lib/database';
@@ -18,7 +18,7 @@ function sanitizeJsonString(str) {
     .replace(/\b/g, '\\b');  // Escape backspaces
 }
 
-// Significantly enhanced language detection function
+// Ultra-conservative language detection function
 function detectLanguage(text) {
   if (!text || typeof text !== 'string') return 'en';
   
@@ -30,118 +30,125 @@ function detectLanguage(text) {
     .trim();
   
   // Split into words for analysis
-  const words = cleanText.split(' ').filter(word => word.length > 1);
+  const words = cleanText.split(' ').filter(word => word.length > 2); // Only consider words longer than 2 chars
   
   if (words.length === 0) return 'en';
   
-  // Comprehensive Malay word list with weights
-  const malayWords = {
-    // High-weight Malay-specific words (very unlikely to appear in English)
-    'adalah': 5, 'dengan': 5, 'untuk': 5, 'dalam': 5, 'pada': 5, 'dari': 5, 'yang': 5,
-    'akan': 5, 'telah': 5, 'sudah': 5, 'belum': 5, 'tidak': 5, 'bukan': 5,
-    'kami': 5, 'kita': 5, 'mereka': 5, 'anda': 5, 'saya': 5,
-    'syarikat': 5, 'projek': 5, 'cadangan': 5, 'kepada': 5, 'daripada': 5,
-    'keperluan': 5, 'pengalaman': 5, 'perkhidmatan': 5, 'penyelenggaraan': 5,
-    'pembinaan': 5, 'kerajaan': 5, 'kontrak': 5, 'latar': 5, 'belakang': 5,
-    'sijil': 5, 'pensijilan': 5, 'ringkasan': 5, 'eksekutif': 5,
-    'bahagian': 5, 'diperkukuhkan': 5, 'disusun': 5, 'semula': 5,
-    'maklumat': 5, 'tambahan': 5, 'mengenai': 5, 'meningkatkan': 5,
-    'kredibiliti': 5, 'menunjukkan': 5, 'kesesuaian': 5, 'menggunakan': 5,
-    'bahasa': 5, 'perniagaan': 5, 'formal': 5, 'persepsi': 5, 'positif': 5,
-    'terhadap': 5, 'komitmen': 5, 'standard': 5, 'tinggi': 5,
-    
-    // Medium-weight words (common Malay words)
-    'dan': 3, 'atau': 3, 'juga': 3, 'hanya': 3, 'dapat': 3,
-    'ini': 3, 'itu': 3, 'dia': 3, 'ia': 3, 'tender': 2,
-    
-    // Lower-weight words (could appear in both languages but more common in Malay)
-    'berhad': 2, 'sdn': 2
+  console.log(`[Language Detection] Analyzing ${words.length} words from: "${text.substring(0, 150)}..."`);
+  
+  // ULTRA-SPECIFIC Malay indicators (words that are NEVER used in English business contexts)
+  const strongMalayIndicators = {
+    // Malay-only words with very high confidence
+    'adalah': 10, 'dengan': 10, 'untuk': 10, 'dalam': 10, 'pada': 10, 'dari': 10, 'yang': 10,
+    'akan': 10, 'telah': 10, 'sudah': 10, 'belum': 10, 'tidak': 10, 'bukan': 10,
+    'kami': 10, 'kita': 10, 'mereka': 10, 'anda': 10, 'saya': 10,
+    'syarikat': 10, 'projek': 8, 'cadangan': 10, 'kepada': 10, 'daripada': 10,
+    'keperluan': 10, 'pengalaman': 8, 'perkhidmatan': 10, 'penyelenggaraan': 10,
+    'pembinaan': 8, 'kerajaan': 10, 'kontrak': 6, 'latar': 10, 'belakang': 8,
+    'sijil': 10, 'pensijilan': 10, 'ringkasan': 10, 'eksekutif': 6,
+    'bahagian': 10, 'diperkukuhkan': 15, 'disusun': 10, 'semula': 10,
+    'maklumat': 10, 'tambahan': 10, 'mengenai': 10, 'meningkatkan': 10,
+    'kredibiliti': 10, 'menunjukkan': 10, 'kesesuaian': 10, 'menggunakan': 10,
+    'bahasa': 10, 'perniagaan': 10, 'formal': 6, 'persepsi': 10, 'positif': 6,
+    'terhadap': 10, 'komitmen': 8, 'standard': 6, 'tinggi': 8,
+    'diperbaiki': 10, 'ditambah': 10, 'dipertingkatkan': 10, 'diperkemas': 10,
+    'menyeluruh': 10, 'berkesan': 10, 'berkualiti': 10, 'profesional': 6,
+    'memastikan': 10, 'menyediakan': 10, 'melaksanakan': 10, 'mencapai': 10
   };
   
-  // Comprehensive English word list with weights
-  const englishWords = {
-    // High-weight English-specific words
-    'the': 5, 'and': 5, 'with': 5, 'for': 5, 'from': 5, 'that': 5, 'this': 5,
-    'will': 5, 'has': 5, 'have': 5, 'not': 5, 'also': 5, 'only': 5, 'can': 5,
-    'they': 5, 'our': 5, 'you': 5, 'your': 5, 'his': 5, 'her': 5, 'its': 5, 'their': 5,
-    'company': 5, 'project': 5, 'proposal': 5, 'requirements': 5, 'experience': 5,
-    'services': 5, 'maintenance': 5, 'construction': 5, 'government': 5, 'contract': 5,
-    'background': 5, 'certifications': 5, 'executive': 5, 'summary': 5,
-    'enhanced': 5, 'strengthened': 5, 'reorganized': 5, 'additional': 5,
-    'information': 5, 'about': 5, 'increase': 5, 'credibility': 5,
-    'demonstrate': 5, 'suitability': 5, 'using': 5, 'language': 5,
-    'business': 5, 'formal': 5, 'perception': 5, 'positive': 5,
-    'towards': 5, 'commitment': 5, 'standards': 5, 'high': 5,
-    'we': 5, 'are': 5, 'is': 5, 'to': 5, 'of': 5, 'in': 5, 'on': 5,
-    'as': 5, 'be': 5, 'by': 5, 'at': 5, 'an': 5, 'or': 5, 'if': 5,
-    
-    // Medium-weight words
-    'tender': 2, 'limited': 3, 'ltd': 3, 'inc': 3, 'corporation': 3,
-    
-    // Common English business terms
-    'solutions': 4, 'professional': 4, 'quality': 4, 'management': 4,
-    'technical': 4, 'approach': 4, 'methodology': 4, 'implementation': 4
+  // ULTRA-SPECIFIC English indicators (words that are NEVER used in Malay business contexts)
+  const strongEnglishIndicators = {
+    // English-only words with very high confidence
+    'the': 10, 'and': 10, 'with': 10, 'for': 10, 'from': 10, 'that': 10, 'this': 10,
+    'will': 10, 'has': 10, 'have': 10, 'not': 10, 'also': 10, 'only': 10, 'can': 10,
+    'they': 10, 'our': 10, 'you': 10, 'your': 10, 'his': 10, 'her': 10, 'its': 10, 'their': 10,
+    'company': 8, 'project': 6, 'proposal': 8, 'requirements': 10, 'experience': 6,
+    'services': 8, 'maintenance': 8, 'construction': 6, 'government': 8, 'contract': 6,
+    'background': 8, 'certifications': 10, 'executive': 6, 'summary': 8,
+    'enhanced': 10, 'strengthened': 10, 'reorganized': 10, 'additional': 10,
+    'information': 8, 'about': 10, 'increase': 8, 'credibility': 8,
+    'demonstrate': 10, 'suitability': 10, 'using': 10, 'language': 6,
+    'business': 6, 'formal': 6, 'perception': 10, 'positive': 6,
+    'towards': 10, 'commitment': 6, 'standards': 6, 'high': 8,
+    'we': 10, 'are': 10, 'is': 10, 'to': 10, 'of': 10, 'in': 10, 'on': 10,
+    'as': 10, 'be': 10, 'by': 10, 'at': 10, 'an': 10, 'or': 10, 'if': 10,
+    'improved': 10, 'better': 10, 'comprehensive': 10, 'ensure': 10,
+    'provide': 10, 'implement': 10, 'achieve': 10, 'deliver': 10
   };
   
   // Count weighted word matches
   let malayScore = 0;
   let englishScore = 0;
-  let totalWords = words.length;
+  let malayWordCount = 0;
+  let englishWordCount = 0;
   
   words.forEach(word => {
-    if (malayWords[word]) {
-      malayScore += malayWords[word];
+    if (strongMalayIndicators[word]) {
+      malayScore += strongMalayIndicators[word];
+      malayWordCount++;
     }
-    if (englishWords[word]) {
-      englishScore += englishWords[word];
+    if (strongEnglishIndicators[word]) {
+      englishScore += strongEnglishIndicators[word];
+      englishWordCount++;
     }
   });
   
-  // Additional pattern-based scoring
+  // Ultra-specific pattern matching for Malay
   const textLower = cleanText;
   
-  // English patterns (strong indicators)
-  if (textLower.includes('we are') || textLower.includes('our company')) englishScore += 10;
-  if (textLower.includes('the company') || textLower.includes('the project')) englishScore += 8;
-  if (textLower.includes('has been') || textLower.includes('have been')) englishScore += 8;
-  if (textLower.includes('will be') || textLower.includes('can be')) englishScore += 6;
-  if (textLower.includes('is a') || textLower.includes('are a')) englishScore += 6;
+  // VERY STRONG Malay patterns (almost impossible to appear in English)
+  if (textLower.includes('telah diperkukuhkan') || textLower.includes('telah ditambah')) malayScore += 25;
+  if (textLower.includes('yang telah') || textLower.includes('yang akan')) malayScore += 20;
+  if (textLower.includes('kami adalah') || textLower.includes('syarikat kami')) malayScore += 20;
+  if (textLower.includes('dengan pengalaman') || textLower.includes('dalam bidang')) malayScore += 15;
+  if (textLower.includes('kepada panel') || textLower.includes('panel penilai')) malayScore += 20;
+  if (textLower.includes('bahasa malaysia') || textLower.includes('bahasa melayu')) malayScore += 25;
   
-  // Malay patterns (strong indicators)
-  if (textLower.includes('telah diperkukuhkan') || textLower.includes('telah ditambah')) malayScore += 15;
-  if (textLower.includes('yang telah') || textLower.includes('yang akan')) malayScore += 10;
-  if (textLower.includes('kami adalah') || textLower.includes('syarikat kami')) malayScore += 10;
-  if (textLower.includes('dengan pengalaman') || textLower.includes('dalam bidang')) malayScore += 8;
+  // VERY STRONG English patterns (almost impossible to appear in Malay)
+  if (textLower.includes('we are pleased') || textLower.includes('our company')) englishScore += 20;
+  if (textLower.includes('the company') || textLower.includes('the project')) englishScore += 15;
+  if (textLower.includes('has been') || textLower.includes('have been')) englishScore += 15;
+  if (textLower.includes('will be') || textLower.includes('can be')) englishScore += 12;
+  if (textLower.includes('is a leading') || textLower.includes('are a leading')) englishScore += 15;
+  if (textLower.includes('look forward') || textLower.includes('thank you')) englishScore += 15;
   
-  // Business entity indicators (lower weight to avoid false positives)
-  if (textLower.includes('sdn bhd') || textLower.includes('berhad')) malayScore += 3;
-  if (textLower.includes('ltd') || textLower.includes('limited') || textLower.includes('inc')) englishScore += 3;
+  // Business entity indicators (very low weight to avoid false positives)
+  if (textLower.includes('sdn bhd') || textLower.includes('berhad')) malayScore += 2;
+  if (textLower.includes('ltd') || textLower.includes('limited') || textLower.includes('inc')) englishScore += 2;
   
-  // Calculate percentages for better decision making
+  // Calculate percentages and word density
   const totalScore = malayScore + englishScore;
-  const malayPercentage = totalScore > 0 ? (malayScore / totalScore) * 100 : 0;
-  const englishPercentage = totalScore > 0 ? (englishScore / totalScore) * 100 : 0;
+  const totalWords = words.length;
+  const malayDensity = malayWordCount / totalWords * 100;
+  const englishDensity = englishWordCount / totalWords * 100;
   
-  console.log(`[Language Detection] Text: "${text.substring(0, 100)}..."`);
-  console.log(`[Language Detection] Words analyzed: ${totalWords}`);
-  console.log(`[Language Detection] Malay score: ${malayScore} (${malayPercentage.toFixed(1)}%)`);
-  console.log(`[Language Detection] English score: ${englishScore} (${englishPercentage.toFixed(1)}%)`);
+  console.log(`[Language Detection] Analysis Results:`);
+  console.log(`  - Total words: ${totalWords}`);
+  console.log(`  - Malay indicators: ${malayWordCount} words, score: ${malayScore}, density: ${malayDensity.toFixed(1)}%`);
+  console.log(`  - English indicators: ${englishWordCount} words, score: ${englishScore}, density: ${englishDensity.toFixed(1)}%`);
   
-  // Decision logic with higher threshold for confidence
-  if (totalScore < 5) {
-    // Very low scores - default to English for business contexts
-    console.log(`[Language Detection] Low confidence scores, defaulting to English`);
+  // ULTRA-CONSERVATIVE decision logic
+  // Require VERY strong evidence for Malay classification
+  
+  // If very few total indicators, default to English
+  if (totalScore < 10) {
+    console.log(`[Language Detection] Very low confidence (score: ${totalScore}), defaulting to English`);
     return 'en';
   }
   
-  // Require significant dominance (at least 60% vs 40%) to classify as Malay
-  if (malayScore > englishScore && malayPercentage >= 60) {
-    console.log(`[Language Detection] Detected as Malay with ${malayPercentage.toFixed(1)}% confidence`);
+  // Require at least 3 strong Malay indicators AND significant score dominance
+  if (malayWordCount >= 3 && malayScore > englishScore * 2 && malayScore >= 30) {
+    console.log(`[Language Detection] Strong Malay evidence: ${malayWordCount} indicators, score ${malayScore} vs ${englishScore}`);
     return 'ms';
-  } else {
-    console.log(`[Language Detection] Detected as English with ${englishPercentage.toFixed(1)}% confidence`);
-    return 'en';
   }
+  
+  // For all other cases, default to English
+  console.log(`[Language Detection] Insufficient Malay evidence, defaulting to English`);
+  console.log(`  - Malay word count: ${malayWordCount} (need ≥3)`);
+  console.log(`  - Malay score: ${malayScore} (need ≥30 and >2x English)`);
+  console.log(`  - English score: ${englishScore}`);
+  
+  return 'en';
 }
 
 export default async function handler(req, res) {
