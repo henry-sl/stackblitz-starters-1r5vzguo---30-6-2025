@@ -1,6 +1,6 @@
 // pages/proposals/edit/[id].js
-// Enhanced proposal editor page with translation integration
-// Added Lingo.dev translation panel for Malay-English support
+// Enhanced proposal editor page with AI improvement insights
+// Added detailed insights panel showing what changes were made and why
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize, Languages } from 'lucide-react';
+import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize, Languages, Lightbulb, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function ProposalEditorPage() {
@@ -46,6 +46,10 @@ export default function ProposalEditorPage() {
   // Translation state
   const [showTranslationPanel, setShowTranslationPanel] = useState(false);
   const [translatedContent, setTranslatedContent] = useState('');
+
+  // AI Improvement Insights state
+  const [showImprovementInsights, setShowImprovementInsights] = useState(false);
+  const [aiInsights, setAiInsights] = useState([]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -220,13 +224,27 @@ export default function ProposalEditorPage() {
     }, 0);
   };
 
+  // Handle translated content
+  const handleTranslatedContentChange = (newTranslatedContent) => {
+    setTranslatedContent(newTranslatedContent);
+  };
+
+  // Use translated content as main content
+  const useTranslatedContent = () => {
+    if (translatedContent) {
+      setContent(translatedContent);
+      setHasUnsavedChanges(true);
+      addToast('Translated content loaded into editor', 'success');
+    }
+  };
+
   // Manual save
   const handleManualSave = () => {
     saveContent();
     addToast('Proposal saved successfully!', 'success');
   };
 
-  // AI Improve functionality
+  // AI Improve functionality with insights
   const handleImproveProposal = async () => {
     if (!proposal?.tenderId) {
       addToast('Unable to improve proposal - tender information missing', 'error');
@@ -244,7 +262,9 @@ export default function ProposalEditorPage() {
       });
       
       setContent(result.improvedContent);
+      setAiInsights(result.insights || []);
       setHasUnsavedChanges(true);
+      setShowImprovementInsights(true);
       addToast('Proposal improved successfully!', 'success');
     } catch (error) {
       addToast('Failed to improve proposal', 'error');
@@ -310,20 +330,6 @@ export default function ProposalEditorPage() {
   // Toggle full screen mode
   const toggleFullScreen = () => {
     setIsFullScreen(!isFullScreen);
-  };
-
-  // Handle translated content
-  const handleTranslatedContentChange = (newTranslatedContent) => {
-    setTranslatedContent(newTranslatedContent);
-  };
-
-  // Use translated content as main content
-  const useTranslatedContent = () => {
-    if (translatedContent) {
-      setContent(translatedContent);
-      setHasUnsavedChanges(true);
-      addToast('Translated content loaded into editor', 'success');
-    }
   };
 
   // Keyboard shortcuts
@@ -580,6 +586,52 @@ export default function ProposalEditorPage() {
             </CardContent>
           </Card>
 
+          {/* AI Improvement Insights Panel */}
+          {showImprovementInsights && aiInsights.length > 0 && !isFullScreen && (
+            <Card className="mt-6 border-green-200 bg-green-50/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2 text-green-900">
+                    <Lightbulb className="w-5 h-5" />
+                    <span>AI Improvement Insights</span>
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowImprovementInsights(false)}
+                  >
+                    <EyeOff className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-green-700 mb-4">
+                    Here's what the AI improved in your proposal:
+                  </p>
+                  
+                  {aiInsights.map((insight, index) => (
+                    <div key={index} className="bg-white border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-green-700 text-xs font-bold">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-green-900 mb-2">
+                            {insight.change}
+                          </h4>
+                          <p className="text-sm text-green-800 leading-relaxed">
+                            {insight.explanation}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Translation Panel */}
           {showTranslationPanel && !isFullScreen && (
             <div className="mt-6">
@@ -648,6 +700,41 @@ export default function ProposalEditorPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* AI Insights Toggle */}
+            {aiInsights.length > 0 && (
+              <Card className="border-green-200 bg-green-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-green-900">
+                    <Lightbulb className="w-5 h-5" />
+                    <span>AI Insights</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-green-700 mb-3">
+                    {aiInsights.length} improvement{aiInsights.length !== 1 ? 's' : ''} made to your proposal
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-green-300 text-green-700 hover:bg-green-50"
+                    onClick={() => setShowImprovementInsights(!showImprovementInsights)}
+                  >
+                    {showImprovementInsights ? (
+                      <>
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Hide Insights
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Insights
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Version History */}
             <Card>

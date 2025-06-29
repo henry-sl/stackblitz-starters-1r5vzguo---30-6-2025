@@ -1,5 +1,6 @@
 // pages/api/improveProposal.js
 // API endpoint for AI-powered proposal improvement using structured prompts
+// Now returns improved content in Bahasa Malaysia with detailed insights
 
 import { createClient } from '@supabase/supabase-js';
 import { tenderOperations, companyOperations } from '../../lib/database';
@@ -52,37 +53,68 @@ export default async function handler(req, res) {
 
     // Mock AI improvement (in real app, would use OpenAI API)
     if (!process.env.OPENAI_API_KEY) {
-      // Simulate AI improvement with enhanced content
-      const improvedContent = proposalContent
-        .replace(/\[Your Company Name\]/g, profile?.name || 'Your Company Name')
-        .replace(/## Executive Summary\n\n.*?\n\n/s, `## Executive Summary
+      // Enhanced mock response with Bahasa Malaysia content and insights
+      const improvedContent = `# Cadangan untuk ${tender.title}
 
-We are pleased to submit our comprehensive proposal for "${tender.title}" as advertised by ${tender.agency}. With our proven track record and specialized expertise, we are uniquely positioned to deliver exceptional results that exceed your expectations while ensuring full compliance with all requirements.
+## Ringkasan Eksekutif
 
-Our approach combines industry best practices with innovative solutions, backed by our experienced team and commitment to quality excellence. We understand the critical importance of this project and are prepared to dedicate our full resources to ensure successful completion within the specified timeline and budget.
+Dengan hormatnya, ${profile?.name || 'syarikat kami'} ingin mengemukakan cadangan komprehensif untuk "${tender.title}" seperti yang diiklankan oleh ${tender.agency}. Dengan rekod prestasi yang terbukti dan kepakaran khusus dalam bidang ${tender.category?.toLowerCase()}, kami yakin dapat menyampaikan hasil yang cemerlang dan melebihi jangkaan sambil memastikan pematuhan penuh kepada semua keperluan yang ditetapkan.
 
-`)
-        .replace(/## Company Background\n\n.*?\n\n/s, `## Company Background
+Pendekatan kami menggabungkan amalan terbaik industri dengan penyelesaian inovatif, disokong oleh pasukan berpengalaman dan komitmen terhadap kecemerlangan kualiti. Kami memahami kepentingan kritikal projek ini dan bersedia untuk menumpukan sepenuh sumber kami bagi memastikan penyiapan yang berjaya dalam tempoh masa dan bajet yang ditetapkan.
 
-${profile?.name || 'Our company'} brings extensive experience and proven capabilities to this project. ${profile?.experience || 'We have successfully completed numerous similar projects with excellent results.'} Our team of certified professionals is committed to delivering high-quality work that meets the highest industry standards.
+## Latar Belakang Syarikat
 
-Our key strengths include:
-- Proven track record in similar projects
-- Certified and experienced team members
-- Strong commitment to quality and safety
-- Advanced equipment and technology
-- Excellent client relationships and references
+${profile?.name || 'Syarikat kami'} membawa pengalaman luas dan keupayaan terbukti untuk projek ini. ${profile?.experience || 'Kami telah berjaya menyiapkan banyak projek serupa dengan hasil yang cemerlang.'} Pasukan profesional bertauliah kami komited untuk menyampaikan kerja berkualiti tinggi yang memenuhi standard industri tertinggi.
 
-`);
+Kekuatan utama kami termasuk:
+- Rekod prestasi terbukti dalam projek serupa
+- Ahli pasukan yang bertauliah dan berpengalaman
+- Komitmen kukuh terhadap kualiti dan keselamatan
+- Peralatan dan teknologi canggih
+- Hubungan pelanggan yang cemerlang dan rujukan
+
+## Pendekatan Teknikal
+
+Kami mencadangkan pendekatan menyeluruh yang menangani semua keperluan teknikal sambil memastikan kualiti, pematuhan jadual masa, dan keberkesanan kos. Metodologi kami merangkumi:
+
+- Perancangan projek terperinci dan penilaian risiko
+- Jaminan kualiti dan pematuhan kepada semua standard
+- Pelaporan kemajuan berkala dan komunikasi pihak berkepentingan
+- Sokongan dan penyelenggaraan selepas pelaksanaan
+
+## Kelayakan
+
+Pensijilan kami termasuk: ${profile?.certifications?.join(', ') || 'Pelbagai pensijilan industri'}
+
+## Kesimpulan
+
+Kami berharap dapat peluang untuk membincangkan cadangan kami secara terperinci dan menunjukkan bagaimana ${profile?.name || 'syarikat kami'} dapat menyampaikan nilai luar biasa untuk projek penting ini.
+
+Yang benar,
+Pasukan ${profile?.name || 'Syarikat Kami'}`;
+
+      const insights = [
+        {
+          change: "Diperkukuhkan bahagian ringkasan eksekutif",
+          explanation: "Ringkasan eksekutif yang lebih kuat akan memberikan kesan pertama yang baik kepada panel penilai dan menunjukkan kefahaman mendalam terhadap keperluan projek. Penggunaan bahasa formal dan profesional dalam Bahasa Malaysia menunjukkan penghormatan terhadap keperluan rasmi tender."
+        },
+        {
+          change: "Ditambah baik bahagian latar belakang syarikat dengan butiran khusus",
+          explanation: "Menyerlahkan kekuatan syarikat dengan lebih jelas akan membantu panel penilai memahami keupayaan dan pengalaman yang relevan. Penyenaraian kekuatan utama dalam format yang mudah dibaca meningkatkan kesan visual cadangan."
+        },
+        {
+          change: "Diperhalusi pendekatan teknikal dengan metodologi yang jelas",
+          explanation: "Pendekatan teknikal yang terstruktur menunjukkan profesionalisme dan perancangan yang teliti. Ini memberikan keyakinan kepada panel penilai bahawa syarikat mempunyai strategi yang jelas untuk melaksanakan projek dengan jayanya."
+        },
+        {
+          change: "Digunakan bahasa Bahasa Malaysia yang formal dan profesional",
+          explanation: "Penggunaan Bahasa Malaysia yang betul dan formal adalah keperluan untuk tender kerajaan Malaysia. Ini menunjukkan penghormatan terhadap bahasa rasmi dan memenuhi keperluan penyerahan tender yang ditetapkan."
+        }
+      ];
 
       return res.status(200).json({ 
         improvedContent,
-        improvements: [
-          'Enhanced executive summary with stronger value proposition',
-          'Improved company background with specific qualifications',
-          'Better alignment with tender requirements',
-          'More professional and compelling language'
-        ]
+        insights
       });
     }
 
@@ -127,30 +159,52 @@ Our key strengths include:
       }
 
       const data = await response.json();
-      const improvedContent = data.choices[0].message.content.trim();
+      const responseText = data.choices[0].message.content.trim();
       
       // Validate the response
-      const validation = validateResponse(improvedContent, 'PROPOSAL_IMPROVEMENT');
+      const validation = validateResponse(responseText, 'PROPOSAL_IMPROVEMENT');
       if (!validation.isValid) {
         console.warn('AI response validation failed:', validation.issues);
       }
       
-      return res.status(200).json({ 
-        improvedContent,
-        improvements: [
-          'Enhanced executive summary',
-          'Improved technical approach',
-          'Strengthened value proposition',
-          'Better alignment with requirements'
-        ],
-        validation: validation.isValid ? 'passed' : 'warning'
-      });
+      // Parse the JSON response
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsedResult = JSON.parse(jsonMatch[0]);
+          return res.status(200).json({
+            improvedContent: parsedResult.improvedContent,
+            insights: parsedResult.insights || [],
+            validation: validation.isValid ? 'passed' : 'warning'
+          });
+        } else {
+          throw new Error('No JSON found in response');
+        }
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        // Fallback to treating the entire response as improved content
+        return res.status(200).json({
+          improvedContent: responseText,
+          insights: [
+            {
+              change: "Kandungan telah diperbaiki oleh AI",
+              explanation: "AI telah membuat penambahbaikan umum kepada cadangan berdasarkan konteks tender dan profil syarikat."
+            }
+          ],
+          validation: 'fallback'
+        });
+      }
     } catch (aiError) {
       console.error('AI improvement error:', aiError);
       // Fall back to mock improvement
       return res.status(200).json({ 
-        improvedContent: proposalContent + '\n\n*AI improvement service temporarily unavailable*',
-        improvements: ['AI service unavailable - no changes made']
+        improvedContent: proposalContent + '\n\n*Perkhidmatan penambahbaikan AI tidak tersedia buat masa ini*',
+        insights: [
+          {
+            change: "Perkhidmatan AI tidak tersedia",
+            explanation: "Sistem AI mengalami masalah teknikal. Sila cuba lagi kemudian atau hubungi sokongan teknikal."
+          }
+        ]
       });
     }
   } catch (error) {
