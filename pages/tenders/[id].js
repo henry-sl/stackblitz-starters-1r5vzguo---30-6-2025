@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/useToast';
+import TenderAIAssistant from '../../components/TenderDetails/TenderAIAssistant';
 import { 
   ArrowLeft, 
   Building, 
@@ -27,7 +28,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-import AIAssistant from '../../components/AIAssistant/AIAssistant'; // Import the new component
 
 export default function TenderDetails() {
   const router = useRouter();
@@ -150,9 +150,9 @@ export default function TenderDetails() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Main Content - Takes 3/4 of the space */}
+        <div className="lg:col-span-3 space-y-6">
           {/* Header */}
           <Card>
             <CardHeader>
@@ -178,7 +178,6 @@ export default function TenderDetails() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline">{tender.category}</Badge>
                     {tender.isNew && <Badge variant="outline">Featured</Badge>}
-                    
                   </div>
                 </div>
                 {getStatusBadge(tender.isNew ? 'new' : 'active')}
@@ -270,9 +269,6 @@ export default function TenderDetails() {
             </CardContent>
           </Card>
 
-          {/* AI Assistant Component */}
-          <AIAssistant tenderId={id} />
-
           {/* Tender Details Tabs */}
           <Card>
             <Tabs defaultValue="description" className="w-full">
@@ -315,8 +311,11 @@ export default function TenderDetails() {
           </Card>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
+        {/* Sidebar - Takes 1/4 of the space */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* AI Assistant Component */}
+          <TenderAIAssistant tenderId={id} />
+
           {/* Key Information */}
           <Card>
             <CardHeader>
