@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { text, targetLang, sourceLang } = req.body;
+  const { text, targetLang } = req.body;
   
   // Validate required fields
   if (!text || !targetLang) {
@@ -29,8 +29,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Determine source language if not provided
-    const determinedSourceLang = sourceLang || (targetLang === 'ms' ? 'en' : 'en');
+    // Improved source language inference logic
+    // If target is Malay (ms), assume source is English (en)
+    // If target is English (en), assume source is Malay (ms)
+    const inferredSourceLang = targetLang === 'ms' ? 'en' : 'ms';
+
+    console.log(`[Translation API] Translating from ${inferredSourceLang} to ${targetLang}:`, text.substring(0, 100) + '...');
 
     if (!lingoEngine) {
       // Fallback to mock translation if API key is not set
@@ -42,19 +46,17 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({
         translatedText: mockTranslation,
-        sourceLanguage: determinedSourceLang,
+        sourceLanguage: inferredSourceLang,
         targetLanguage: targetLang,
         originalLength: text.length,
         translatedLength: mockTranslation.length,
         note: "This is a mock translation because LINGODEV_API_KEY is not set."
       });
     }
-
-    console.log(`[Translation API] Translating from ${determinedSourceLang} to ${targetLang}:`, text.substring(0, 100) + '...');
     
     // Use the correct Lingo.dev SDK method: localizeText
     const translationResult = await lingoEngine.localizeText(text, {
-      sourceLocale: determinedSourceLang,
+      sourceLocale: inferredSourceLang,
       targetLocale: targetLang,
     });
 
@@ -62,7 +64,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       translatedText: translationResult,
-      sourceLanguage: determinedSourceLang,
+      sourceLanguage: inferredSourceLang,
       targetLanguage: targetLang,
       originalLength: text.length,
       translatedLength: translationResult.length,

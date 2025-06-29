@@ -27,12 +27,12 @@ export default function TranslationPanel({
     try {
       setIsTranslating(true);
       
+      // Remove sourceLang parameter - let API infer it based on targetLang
       const result = await api('/api/translate', {
         method: 'POST',
         body: { 
           text: originalContent.trim(), 
-          targetLang: currentTargetLang,
-          sourceLang: originalLanguage
+          targetLang: currentTargetLang
         }
       });
 
