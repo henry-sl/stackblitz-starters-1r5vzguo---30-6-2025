@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "../../hooks/useToast";
+import { api } from "../../lib/api";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -18,92 +21,172 @@ import {
   FileText
 } from "lucide-react";
 
-// Mock company profile data
-const mockProfile = {
-  basicInfo: {
-    companyName: "Pembinaan Jaya Sdn Bhd",
-    registrationNumber: "123456-A",
-    address: "No. 123, Jalan Industri 2, Taman Perindustrian, 47100 Puchong, Selangor",
-    phone: "+603-8051-2345",
-    email: "info@pembinaan-jaya.com.my",
-    website: "www.pembinaan-jaya.com.my",
-    establishedYear: "2016"
-  },
-  certifications: {
-    cidbGrade: "G5",
-    cidbExpiry: "2026-12-31",
-    iso9001: true,
-    iso14001: false,
-    ohsas18001: true,
-    contractorLicense: "KL-2024-001234",
-    licenseExpiry: "2026-06-30"
-  },
-  experience: {
-    yearsInOperation: "8",
-    totalProjects: "52",
-    totalValue: "RM 15,200,000",
-    specialties: ["Road Construction", "Infrastructure", "Maintenance", "Drainage Works"],
-    majorProjects: [
-      {
-        name: "Federal Highway Maintenance Phase 2",
-        year: "2023",
-        value: "RM 1,200,000",
-        client: "Malaysian Highway Authority"
-      },
-      {
-        name: "Shah Alam Industrial Road Repairs",
-        year: "2022",
-        value: "RM 800,000",
-        client: "Selangor State Government"
-      },
-      {
-        name: "Klang Valley Drainage Improvement",
-        year: "2021",
-        value: "RM 950,000",
-        client: "Department of Irrigation and Drainage"
-      }
-    ]
-  },
-  team: {
-    totalEmployees: "25",
-    engineers: "3",
-    supervisors: "5",
-    technicians: "12",
-    laborers: "5",
-    keyPersonnel: [
-      {
-        name: "Eng. Ahmad Hassan",
-        position: "Project Manager",
-        experience: "15 years",
-        certifications: ["Professional Engineer", "Project Management"]
-      },
-      {
-        name: "Encik Rahman Ali",
-        position: "Site Supervisor",
-        experience: "12 years",
-        certifications: ["CIDB Certified", "Safety Officer"]
-      }
-    ]
-  },
-  preferences: {
-    categories: ["Construction", "Infrastructure", "Maintenance"],
-    locations: ["Kuala Lumpur", "Selangor", "Putrajaya"],
-    budgetRange: "RM 500,000 - RM 5,000,000"
-  }
-};
-
 export const CompanyProfile = () => {
-  const [profile, setProfile] = useState(mockProfile);
+  const { user } = useAuth();
+  const { addToast } = useToast();
+  
+  // State for profile data - initialized with empty structure
+  const [profile, setProfile] = useState({
+    basicInfo: {
+      companyName: "",
+      registrationNumber: "",
+      address: "",
+      phone: "",
+      email: "",
+      website: "",
+      establishedYear: ""
+    },
+    certifications: {
+      cidbGrade: "",
+      cidbExpiry: "",
+      iso9001: false,
+      iso14001: false,
+      ohsas18001: false,
+      contractorLicense: "",
+      licenseExpiry: ""
+    },
+    experience: {
+      yearsInOperation: "",
+      totalProjects: "",
+      totalValue: "",
+      specialties: [],
+      majorProjects: []
+    },
+    team: {
+      totalEmployees: "",
+      engineers: "",
+      supervisors: "",
+      technicians: "",
+      laborers: "",
+      keyPersonnel: []
+    },
+    preferences: {
+      categories: [],
+      locations: [],
+      budgetRange: ""
+    }
+  });
+
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load company profile data when component mounts
+  useEffect(() => {
+    if (user) {
+      loadCompanyData();
+    }
+  }, [user]);
+
+  const loadCompanyData = async () => {
+    try {
+      setLoading(true);
+      console.log('[CompanyProfile] Loading company data');
+      const data = await api('/api/company');
+      console.log('[CompanyProfile] Company data loaded:', data);
+      
+      // Map the database data to our profile structure
+      setProfile({
+        basicInfo: {
+          companyName: data.name || "",
+          registrationNumber: data.registrationNumber || "",
+          address: data.address || "",
+          phone: data.contactPhone || "",
+          email: data.contactEmail || "",
+          website: data.website || "",
+          establishedYear: data.establishedYear || ""
+        },
+        certifications: {
+          cidbGrade: data.cidbGrade || "",
+          cidbExpiry: data.cidbExpiry || "",
+          iso9001: data.iso9001 || false,
+          iso14001: data.iso14001 || false,
+          ohsas18001: data.ohsas18001 || false,
+          contractorLicense: data.contractorLicense || "",
+          licenseExpiry: data.licenseExpiry || ""
+        },
+        experience: {
+          yearsInOperation: data.yearsInOperation || "",
+          totalProjects: data.totalProjects || "",
+          totalValue: data.totalValue || "",
+          specialties: data.specialties || [],
+          majorProjects: data.majorProjects || []
+        },
+        team: {
+          totalEmployees: data.totalEmployees || "",
+          engineers: data.engineersCount || "",
+          supervisors: data.supervisorsCount || "",
+          technicians: data.techniciansCount || "",
+          laborers: data.laborersCount || "",
+          keyPersonnel: data.keyPersonnel || []
+        },
+        preferences: {
+          categories: data.preferredCategories || [],
+          locations: data.preferredLocations || [],
+          budgetRange: data.budgetRange || ""
+        }
+      });
+    } catch (error) {
+      console.error('[CompanyProfile] Error loading company data:', error);
+      // Don't show error for missing profile - this is normal for new users
+      if (!error.message.includes('404') && !error.message.includes('not found')) {
+        addToast('Failed to load company profile', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setIsEditing(false);
-    alert("Profile updated successfully!");
+    try {
+      setIsSaving(true);
+      console.log('[CompanyProfile] Saving profile data:', profile);
+      
+      // Map the profile data to the format expected by the API
+      const updateData = {
+        name: profile.basicInfo.companyName,
+        registrationNumber: profile.basicInfo.registrationNumber,
+        address: profile.basicInfo.address,
+        contactPhone: profile.basicInfo.phone,
+        contactEmail: profile.basicInfo.email,
+        website: profile.basicInfo.website,
+        establishedYear: profile.basicInfo.establishedYear,
+        cidbGrade: profile.certifications.cidbGrade,
+        cidbExpiry: profile.certifications.cidbExpiry,
+        iso9001: profile.certifications.iso9001,
+        iso14001: profile.certifications.iso14001,
+        ohsas18001: profile.certifications.ohsas18001,
+        contractorLicense: profile.certifications.contractorLicense,
+        licenseExpiry: profile.certifications.licenseExpiry,
+        yearsInOperation: profile.experience.yearsInOperation,
+        totalProjects: profile.experience.totalProjects,
+        totalValue: profile.experience.totalValue,
+        specialties: profile.experience.specialties,
+        majorProjects: profile.experience.majorProjects,
+        totalEmployees: profile.team.totalEmployees,
+        engineersCount: profile.team.engineers,
+        supervisorsCount: profile.team.supervisors,
+        techniciansCount: profile.team.technicians,
+        laborersCount: profile.team.laborers,
+        keyPersonnel: profile.team.keyPersonnel,
+        preferredCategories: profile.preferences.categories,
+        preferredLocations: profile.preferences.locations,
+        budgetRange: profile.preferences.budgetRange
+      };
+
+      await api('/api/company', {
+        method: 'PUT',
+        body: updateData
+      });
+
+      setIsEditing(false);
+      addToast('Profile updated successfully!', 'success');
+    } catch (error) {
+      console.error('[CompanyProfile] Error saving profile:', error);
+      addToast('Failed to update profile', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getCompletionScore = () => {
@@ -111,19 +194,19 @@ export const CompanyProfile = () => {
     let completed = 0;
     let total = 0;
 
-    // Basic info (8 fields)
-    Object.values(profile.basicInfo).forEach(value => {
-      total++;
-      if (value && value.trim()) completed++;
-    });
+    // Basic info (7 fields)
+    const basicFields = Object.values(profile.basicInfo);
+    total += basicFields.length;
+    completed += basicFields.filter(value => value && value.trim()).length;
 
-    // Certifications (6 fields)
-    total += 6;
+    // Certifications (7 fields)
+    total += 7;
     if (profile.certifications.cidbGrade) completed++;
     if (profile.certifications.cidbExpiry) completed++;
     if (profile.certifications.contractorLicense) completed++;
     if (profile.certifications.licenseExpiry) completed++;
     if (profile.certifications.iso9001) completed++;
+    if (profile.certifications.iso14001) completed++;
     if (profile.certifications.ohsas18001) completed++;
 
     // Experience (4 main fields)
@@ -133,10 +216,35 @@ export const CompanyProfile = () => {
     if (profile.experience.specialties.length > 0) completed++;
     if (profile.experience.majorProjects.length > 0) completed++;
 
+    // Team (5 fields)
+    total += 5;
+    if (profile.team.totalEmployees) completed++;
+    if (profile.team.engineers) completed++;
+    if (profile.team.supervisors) completed++;
+    if (profile.team.technicians) completed++;
+    if (profile.team.laborers) completed++;
+
     return Math.round((completed / total) * 100);
   };
 
   const completionScore = getCompletionScore();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div className="skeleton h-8 w-1/3"></div>
+          <div className="skeleton h-32 w-full"></div>
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="skeleton h-64 w-full"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -347,6 +455,10 @@ export const CompanyProfile = () => {
                   <select
                     value={profile.certifications.cidbGrade}
                     disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, cidbGrade: e.target.value }
+                    })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                   >
                     <option value="">Select Grade</option>
@@ -368,6 +480,10 @@ export const CompanyProfile = () => {
                     type="date"
                     value={profile.certifications.cidbExpiry}
                     disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, cidbExpiry: e.target.value }
+                    })}
                   />
                 </div>
 
@@ -378,6 +494,10 @@ export const CompanyProfile = () => {
                   <Input
                     value={profile.certifications.contractorLicense}
                     disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, contractorLicense: e.target.value }
+                    })}
                   />
                 </div>
 
@@ -389,6 +509,10 @@ export const CompanyProfile = () => {
                     type="date"
                     value={profile.certifications.licenseExpiry}
                     disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      certifications: { ...profile.certifications, licenseExpiry: e.target.value }
+                    })}
                   />
                 </div>
 
@@ -402,6 +526,10 @@ export const CompanyProfile = () => {
                         type="checkbox"
                         checked={profile.certifications.iso9001}
                         disabled={!isEditing}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          certifications: { ...profile.certifications, iso9001: e.target.checked }
+                        })}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>ISO 9001:2015 (Quality Management)</span>
@@ -412,6 +540,10 @@ export const CompanyProfile = () => {
                         type="checkbox"
                         checked={profile.certifications.iso14001}
                         disabled={!isEditing}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          certifications: { ...profile.certifications, iso14001: e.target.checked }
+                        })}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>ISO 14001 (Environmental Management)</span>
@@ -422,6 +554,10 @@ export const CompanyProfile = () => {
                         type="checkbox"
                         checked={profile.certifications.ohsas18001}
                         disabled={!isEditing}
+                        onChange={(e) => setProfile({
+                          ...profile,
+                          certifications: { ...profile.certifications, ohsas18001: e.target.checked }
+                        })}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>OHSAS 18001 (Occupational Health & Safety)</span>
@@ -453,6 +589,10 @@ export const CompanyProfile = () => {
                     <Input
                       value={profile.experience.yearsInOperation}
                       disabled={!isEditing}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        experience: { ...profile.experience, yearsInOperation: e.target.value }
+                      })}
                     />
                   </div>
                   <div>
@@ -462,6 +602,10 @@ export const CompanyProfile = () => {
                     <Input
                       value={profile.experience.totalProjects}
                       disabled={!isEditing}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        experience: { ...profile.experience, totalProjects: e.target.value }
+                      })}
                     />
                   </div>
                   <div>
@@ -471,6 +615,10 @@ export const CompanyProfile = () => {
                     <Input
                       value={profile.experience.totalValue}
                       disabled={!isEditing}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        experience: { ...profile.experience, totalValue: e.target.value }
+                      })}
                     />
                   </div>
                 </div>
@@ -507,7 +655,7 @@ export const CompanyProfile = () => {
                             Project Name
                           </label>
                           <Input
-                            value={project.name}
+                            value={project.name || ""}
                             disabled={!isEditing}
                           />
                         </div>
@@ -516,7 +664,7 @@ export const CompanyProfile = () => {
                             Year
                           </label>
                           <Input
-                            value={project.year}
+                            value={project.year || ""}
                             disabled={!isEditing}
                           />
                         </div>
@@ -525,7 +673,7 @@ export const CompanyProfile = () => {
                             Value
                           </label>
                           <Input
-                            value={project.value}
+                            value={project.value || ""}
                             disabled={!isEditing}
                           />
                         </div>
@@ -534,7 +682,7 @@ export const CompanyProfile = () => {
                             Client
                           </label>
                           <Input
-                            value={project.client}
+                            value={project.client || ""}
                             disabled={!isEditing}
                           />
                         </div>
@@ -564,24 +712,79 @@ export const CompanyProfile = () => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{profile.team.totalEmployees}</div>
+                  <div className="text-2xl font-bold text-blue-600">{profile.team.totalEmployees || "0"}</div>
                   <div className="text-sm text-gray-600">Total Employees</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.totalEmployees}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, totalEmployees: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{profile.team.engineers}</div>
+                  <div className="text-2xl font-bold text-green-600">{profile.team.engineers || "0"}</div>
                   <div className="text-sm text-gray-600">Engineers</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.engineers}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, engineers: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{profile.team.supervisors}</div>
+                  <div className="text-2xl font-bold text-purple-600">{profile.team.supervisors || "0"}</div>
                   <div className="text-sm text-gray-600">Supervisors</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.supervisors}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, supervisors: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{profile.team.technicians}</div>
+                  <div className="text-2xl font-bold text-orange-600">{profile.team.technicians || "0"}</div>
                   <div className="text-sm text-gray-600">Technicians</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.technicians}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, technicians: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-600">{profile.team.laborers}</div>
+                  <div className="text-2xl font-bold text-gray-600">{profile.team.laborers || "0"}</div>
                   <div className="text-sm text-gray-600">Laborers</div>
+                  {isEditing && (
+                    <Input
+                      value={profile.team.laborers}
+                      onChange={(e) => setProfile({
+                        ...profile,
+                        team: { ...profile.team, laborers: e.target.value }
+                      })}
+                      className="mt-2"
+                      placeholder="0"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -596,7 +799,7 @@ export const CompanyProfile = () => {
                             Name
                           </label>
                           <Input
-                            value={person.name}
+                            value={person.name || ""}
                             disabled={!isEditing}
                           />
                         </div>
@@ -605,7 +808,7 @@ export const CompanyProfile = () => {
                             Position
                           </label>
                           <Input
-                            value={person.position}
+                            value={person.position || ""}
                             disabled={!isEditing}
                           />
                         </div>
@@ -614,7 +817,7 @@ export const CompanyProfile = () => {
                             Experience
                           </label>
                           <Input
-                            value={person.experience}
+                            value={person.experience || ""}
                             disabled={!isEditing}
                           />
                         </div>
@@ -623,7 +826,7 @@ export const CompanyProfile = () => {
                             Certifications
                           </label>
                           <div className="flex flex-wrap gap-2">
-                            {person.certifications.map((cert, certIndex) => (
+                            {(person.certifications || []).map((cert, certIndex) => (
                               <Badge key={certIndex} variant="outline">
                                 {cert}
                               </Badge>
@@ -691,6 +894,10 @@ export const CompanyProfile = () => {
                   <Input
                     value={profile.preferences.budgetRange}
                     disabled={!isEditing}
+                    onChange={(e) => setProfile({
+                      ...profile,
+                      preferences: { ...profile.preferences, budgetRange: e.target.value }
+                    })}
                     placeholder="e.g., RM 500,000 - RM 5,000,000"
                   />
                 </div>

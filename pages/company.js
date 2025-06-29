@@ -1,11 +1,11 @@
 // pages/company.js
-// This page displays and allows editing of the company profile
-// Updated to use ProfileForm component that connects to Supabase database
+// Updated to use the detailed CompanyProfile component instead of the simple ProfileForm
+// This will display the comprehensive tabbed interface with all profile sections
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
-import ProfileForm from '../components/ProfileForm';
+import { CompanyProfile } from '../components/CompanyProfile/CompanyProfile';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function CompanyPage() {
@@ -33,20 +33,5 @@ export default function CompanyPage() {
     return null;
   }
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Page Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
-        <p className="mt-2 text-gray-600">
-          Manage your company information and build your profile for better tender matching
-        </p>
-      </header>
-
-      {/* Main Content */}
-      <main>
-        <ProfileForm />
-      </main>
-    </div>
-  );
+  return <CompanyProfile />;
 }

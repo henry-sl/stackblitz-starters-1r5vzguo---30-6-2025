@@ -1,5 +1,6 @@
 // pages/api/company.js
-// API endpoint for company profile operations with improved field mapping
+// API endpoint for company profile operations with enhanced field mapping
+// Updated to support all the new fields from the detailed company profile
 
 import { createClient } from '@supabase/supabase-js';
 import { companyOperations } from '../../lib/database';
@@ -64,7 +65,7 @@ export default async function handler(req, res) {
           return res.status(200).json({});
         }
         
-        // Transform snake_case to camelCase for frontend
+        // Transform snake_case to camelCase for frontend with enhanced fields
         const transformedProfile = {
           name: profile.name,
           registrationNumber: profile.registration_number,
@@ -79,6 +80,27 @@ export default async function handler(req, res) {
           contactPhone: profile.contact_phone,
           specialties: profile.specialties,
           teamSize: profile.team_size,
+          // Enhanced fields
+          cidbGrade: profile.cidb_grade,
+          cidbExpiry: profile.cidb_expiry,
+          iso9001: profile.iso9001,
+          iso14001: profile.iso14001,
+          ohsas18001: profile.ohsas18001,
+          contractorLicense: profile.contractor_license,
+          licenseExpiry: profile.license_expiry,
+          yearsInOperation: profile.years_in_operation,
+          totalProjects: profile.total_projects,
+          totalValue: profile.total_value,
+          majorProjects: profile.major_projects,
+          totalEmployees: profile.total_employees,
+          engineersCount: profile.engineers_count,
+          supervisorsCount: profile.supervisors_count,
+          techniciansCount: profile.technicians_count,
+          laborersCount: profile.laborers_count,
+          keyPersonnel: profile.key_personnel,
+          preferredCategories: profile.preferred_categories,
+          preferredLocations: profile.preferred_locations,
+          budgetRange: profile.budget_range,
           createdAt: profile.created_at,
           updatedAt: profile.updated_at
         };
@@ -114,7 +136,7 @@ export default async function handler(req, res) {
         console.log('[Company API] Updating company profile');
         const updatedProfile = await companyOperations.upsertProfile(supabaseServiceRole, user.id, updates);
         
-        // Transform snake_case to camelCase for frontend response
+        // Transform snake_case to camelCase for frontend response with enhanced fields
         const transformedProfile = {
           name: updatedProfile.name,
           registrationNumber: updatedProfile.registration_number,
@@ -129,6 +151,27 @@ export default async function handler(req, res) {
           contactPhone: updatedProfile.contact_phone,
           specialties: updatedProfile.specialties,
           teamSize: updatedProfile.team_size,
+          // Enhanced fields
+          cidbGrade: updatedProfile.cidb_grade,
+          cidbExpiry: updatedProfile.cidb_expiry,
+          iso9001: updatedProfile.iso9001,
+          iso14001: updatedProfile.iso14001,
+          ohsas18001: updatedProfile.ohsas18001,
+          contractorLicense: updatedProfile.contractor_license,
+          licenseExpiry: updatedProfile.license_expiry,
+          yearsInOperation: updatedProfile.years_in_operation,
+          totalProjects: updatedProfile.total_projects,
+          totalValue: updatedProfile.total_value,
+          majorProjects: updatedProfile.major_projects,
+          totalEmployees: updatedProfile.total_employees,
+          engineersCount: updatedProfile.engineers_count,
+          supervisorsCount: updatedProfile.supervisors_count,
+          techniciansCount: updatedProfile.technicians_count,
+          laborersCount: updatedProfile.laborers_count,
+          keyPersonnel: updatedProfile.key_personnel,
+          preferredCategories: updatedProfile.preferred_categories,
+          preferredLocations: updatedProfile.preferred_locations,
+          budgetRange: updatedProfile.budget_range,
           createdAt: updatedProfile.created_at,
           updatedAt: updatedProfile.updated_at
         };

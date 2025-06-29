@@ -1,11 +1,11 @@
 // pages/company-profile.js
-// Enhanced company profile page with comprehensive profile management
-// Updated to use ProfileForm component that connects to Supabase database
+// Updated to use the detailed CompanyProfile component instead of the simple ProfileForm
+// This provides a consistent experience across both routes
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
-import ProfileForm from '../components/ProfileForm';
+import { CompanyProfile } from '../components/CompanyProfile/CompanyProfile';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function CompanyProfilePage() {
@@ -33,20 +33,5 @@ export default function CompanyProfilePage() {
     return null;
   }
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Page Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Company Profile</h1>
-        <p className="mt-2 text-gray-600">
-          Complete your company information to improve AI assistance and tender matching
-        </p>
-      </header>
-
-      {/* Main Content */}
-      <main>
-        <ProfileForm />
-      </main>
-    </div>
-  );
+  return <CompanyProfile />;
 }
