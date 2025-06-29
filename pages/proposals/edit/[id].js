@@ -1,6 +1,6 @@
 // pages/proposals/edit/[id].js
-// Enhanced proposal editor page with database integration for versioning and quick insert
-// Autosave disabled, version viewing enabled
+// Enhanced proposal editor page with database integration for versioning and AI assistant
+// Autosave disabled, version viewing enabled, AI chatbot integrated
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -14,6 +14,7 @@ import AutosaveIndicator from '../../../components/ProposalEditor/AutosaveIndica
 import ToolbarSection from '../../../components/ProposalEditor/ToolbarSection';
 import ContentArea from '../../../components/ProposalEditor/ContentArea';
 import ExportControls from '../../../components/ProposalEditor/ExportControls';
+import ProposalAIAssistant from '../../../components/ProposalEditor/ProposalAIAssistant';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
@@ -527,7 +528,7 @@ export default function ProposalEditorPage() {
           : 'grid grid-cols-1 lg:grid-cols-4 gap-8'
       }`}>
         {/* Main Editor */}
-        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-3'}>
+        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-2'}>
           <Card className={`${
             isFullScreen 
               ? 'h-full border-0 shadow-none rounded-none' 
@@ -585,7 +586,17 @@ export default function ProposalEditorPage() {
 
         {/* Sidebar - hidden in full screen */}
         {!isFullScreen && (
-          <div className="space-y-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* AI Assistant - Full width in sidebar */}
+            <div className="h-[600px]">
+              <ProposalAIAssistant
+                tenderId={tender?.id}
+                proposalId={proposal?.id}
+                currentProposalContent={content}
+                onUpdateProposalContent={handleContentChange}
+              />
+            </div>
+
             {/* Quick Insert */}
             <Card>
               <CardHeader>
@@ -627,43 +638,6 @@ export default function ProposalEditorPage() {
                     Complete your company profile to enable quick insert
                   </p>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Version History */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <History className="w-5 h-5" />
-                  <span>Version History</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {versions && versions.length > 0 ? (
-                    versions.slice(0, 5).map((version) => (
-                      <div key={version.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
-                        <div>
-                          <p className="text-sm font-medium">Version {version.version}</p>
-                          <p className="text-xs text-gray-500">{format(new Date(version.createdAt), "MMM d, HH:mm")}</p>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleViewVersion(version)}
-                          disabled={isSubmitted}
-                        >
-                          View
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-sm text-gray-500">No versions yet</p>
-                      <p className="text-xs text-gray-400 mt-1">Versions are created when you save drafts</p>
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
 

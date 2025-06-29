@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { tenderId, proposalContent } = req.body;
+  const { tenderId, proposalContent, userInstruction = '', chatHistory = [] } = req.body;
   
   if (!tenderId || !proposalContent) {
     return res.status(400).json({ error: 'tenderId and proposalContent are required' });
@@ -52,36 +52,39 @@ export default async function handler(req, res) {
 
     // Mock AI improvement (in real app, would use OpenAI API)
     if (!process.env.OPENAI_API_KEY) {
-      // Simulate AI improvement with enhanced content
-      const improvedContent = proposalContent
-        .replace(/\[Your Company Name\]/g, profile?.name || 'Your Company Name')
-        .replace(/## Executive Summary\n\n.*?\n\n/s, `## Executive Summary
+      // Simulate AI improvement with enhanced content based on user instruction
+      let improvedContent = proposalContent;
+      
+      if (userInstruction.toLowerCase().includes('add') || userInstruction.toLowerCase().includes('include')) {
+        improvedContent += `\n\n## Additional Information\n\nBased on your request: ${userInstruction}\n\nWe have incorporated the requested information to strengthen our proposal and better align with your specific requirements.`;
+      } else if (userInstruction.toLowerCase().includes('remove') || userInstruction.toLowerCase().includes('delete')) {
+        improvedContent = proposalContent.replace(/\[Your Company Name\]/g, profile?.name || 'Your Company Name');
+      } else if (userInstruction.toLowerCase().includes('emphasize') || userInstruction.toLowerCase().includes('highlight')) {
+        improvedContent = proposalContent.replace(/## Executive Summary\n\n.*?\n\n/s, `## Executive Summary
+
+**HIGHLIGHTED:** We are pleased to submit our comprehensive proposal for "${tender.title}" as advertised by ${tender.agency}. ${userInstruction} Our proven track record and specialized expertise make us uniquely positioned to deliver exceptional results that exceed your expectations while ensuring full compliance with all requirements.
+
+`);
+      } else {
+        // General improvement
+        improvedContent = proposalContent
+          .replace(/\[Your Company Name\]/g, profile?.name || 'Your Company Name')
+          .replace(/## Executive Summary\n\n.*?\n\n/s, `## Executive Summary
 
 We are pleased to submit our comprehensive proposal for "${tender.title}" as advertised by ${tender.agency}. With our proven track record and specialized expertise, we are uniquely positioned to deliver exceptional results that exceed your expectations while ensuring full compliance with all requirements.
 
 Our approach combines industry best practices with innovative solutions, backed by our experienced team and commitment to quality excellence. We understand the critical importance of this project and are prepared to dedicate our full resources to ensure successful completion within the specified timeline and budget.
 
-`)
-        .replace(/## Company Background\n\n.*?\n\n/s, `## Company Background
-
-${profile?.name || 'Our company'} brings extensive experience and proven capabilities to this project. ${profile?.experience || 'We have successfully completed numerous similar projects with excellent results.'} Our team of certified professionals is committed to delivering high-quality work that meets the highest industry standards.
-
-Our key strengths include:
-- Proven track record in similar projects
-- Certified and experienced team members
-- Strong commitment to quality and safety
-- Advanced equipment and technology
-- Excellent client relationships and references
-
 `);
+      }
 
       return res.status(200).json({ 
         improvedContent,
         improvements: [
-          'Enhanced executive summary with stronger value proposition',
-          'Improved company background with specific qualifications',
-          'Better alignment with tender requirements',
-          'More professional and compelling language'
+          'Incorporated user feedback and instructions',
+          'Enhanced content based on specific requirements',
+          'Maintained professional tone and structure',
+          'Aligned with tender requirements'
         ]
       });
     }
@@ -107,7 +110,7 @@ Our key strengths include:
         proposalContent
       };
 
-      const messages = buildPrompt('PROPOSAL_IMPROVEMENT', context);
+      const messages = buildPrompt('PROPOSAL_IMPROVEMENT', context, '', userInstruction, chatHistory);
       const config = TASK_CONFIGS.PROPOSAL_IMPROVEMENT;
 
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -138,7 +141,7 @@ Our key strengths include:
       return res.status(200).json({ 
         improvedContent,
         improvements: [
-          'Enhanced executive summary',
+          'Enhanced based on user instructions',
           'Improved technical approach',
           'Strengthened value proposition',
           'Better alignment with requirements'
