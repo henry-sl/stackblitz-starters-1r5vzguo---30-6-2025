@@ -152,12 +152,14 @@ export const CompanyProfile = () => {
         website: profile.basicInfo.website,
         establishedYear: profile.basicInfo.establishedYear,
         cidbGrade: profile.certifications.cidbGrade,
-        cidbExpiry: profile.certifications.cidbExpiry,
+        // Convert empty strings to null for date fields
+        cidbExpiry: profile.certifications.cidbExpiry || null,
         iso9001: profile.certifications.iso9001,
         iso14001: profile.certifications.iso14001,
         ohsas18001: profile.certifications.ohsas18001,
         contractorLicense: profile.certifications.contractorLicense,
-        licenseExpiry: profile.certifications.licenseExpiry,
+        // Convert empty strings to null for date fields
+        licenseExpiry: profile.certifications.licenseExpiry || null,
         yearsInOperation: profile.experience.yearsInOperation,
         totalProjects: profile.experience.totalProjects,
         totalValue: profile.experience.totalValue,
