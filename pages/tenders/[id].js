@@ -1,5 +1,5 @@
 // pages/tenders/[id].js
-// Updated tender details page with new modern design
+// Updated tender details page with AI Assistant replacing Key Information section
 // Converted from React Router to Next.js routing
 
 import React, { useState } from 'react';
@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import AIAssistant from '../../components/AIAssistant';
 import { useToast } from '../../hooks/useToast';
 import { 
   ArrowLeft, 
@@ -312,26 +313,8 @@ export default function TenderDetails() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Key Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Key Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Closing Date</label>
-                <p className="font-semibold text-gray-900">{new Date(tender.closingDate).toLocaleDateString()}</p>
-                <p className="text-sm text-red-600 flex items-center space-x-1">
-                  <Clock className="w-3 h-3" />
-                  <span>{getDaysUntilClosing(tender.closingDate)}</span>
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Category</label>
-                <p className="text-gray-900">{tender.category}</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* AI Assistant - Replaces Key Information */}
+          <AIAssistant />
 
           {/* Quick Actions */}
           <Card>
