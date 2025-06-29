@@ -1,8 +1,9 @@
 // pages/api/generateProposal.js
-// API endpoint for generating AI-powered proposal drafts using Supabase data
+// API endpoint for generating AI-powered proposal drafts using structured prompts
 
 import { createClient } from '@supabase/supabase-js';
 import { tenderOperations, companyOperations, proposalOperations } from '../../lib/database';
+import { buildPrompt, validateResponse, TASK_CONFIGS } from '../../lib/aiPrompts';
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -82,8 +83,29 @@ export default async function handler(req, res) {
         `${profile.name} Team\n\n` +
         `*(This is an AI-generated proposal based on your company profile)*`;
     } else {
-      // Use OpenAI to generate a proposal
+      // Use structured prompt system for OpenAI
       try {
+        const context = {
+          tender: {
+            title: tender.title,
+            description: tender.description,
+            agency: tender.agency,
+            category: tender.category,
+            budget: tender.budget,
+            requirements: tender.requirements
+          },
+          company: {
+            name: profile.name,
+            registrationNumber: profile.registration_number,
+            certifications: profile.certifications,
+            experience: profile.experience,
+            contactEmail: profile.contact_email
+          }
+        };
+
+        const messages = buildPrompt('PROPOSAL_GENERATION', context);
+        const config = TASK_CONFIGS.PROPOSAL_GENERATION;
+
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: 'POST',
           headers: {
@@ -91,15 +113,8 @@ export default async function handler(req, res) {
             'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
           },
           body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [
-              {
-                role: "user",
-                content: `You are a professional proposal writer. Write a compelling proposal for the following tender, highlighting the company's qualifications and addressing the tender requirements.\n\nTender:\nTitle: ${tender.title}\nDescription: ${tender.description}\nAgency: ${tender.agency}\nCategory: ${tender.category}\n\nCompany:\nName: ${profile.name}\nCertifications: ${profile.certifications?.join(', ') || 'None'}\nExperience: ${profile.experience}\n\nThe proposal should be well-structured with sections like Executive Summary, Company Overview, Approach, and Conclusion. Use a professional tone and format it with markdown headers.`
-              }
-            ],
-            max_tokens: 1500,
-            temperature: 0.7
+            ...config,
+            messages
           })
         });
 
@@ -109,6 +124,13 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         proposalContent = data.choices[0].message.content.trim();
+        
+        // Validate the response
+        const validation = validateResponse(proposalContent, 'PROPOSAL_GENERATION');
+        if (!validation.isValid) {
+          console.warn('AI response validation failed:', validation.issues);
+          // Log but continue with the response
+        }
       } catch (aiError) {
         console.error("AI generation error:", aiError);
         // Fall back to dummy content if AI fails

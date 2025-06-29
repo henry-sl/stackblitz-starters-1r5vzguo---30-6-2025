@@ -1,8 +1,9 @@
 // pages/api/checkEligibility.js
-// API endpoint for AI-powered eligibility checking using Supabase data
+// API endpoint for AI-powered eligibility checking using structured prompts
 
 import { createClient } from '@supabase/supabase-js';
 import { tenderOperations, companyOperations } from '../../lib/database';
+import { buildPrompt, validateResponse, TASK_CONFIGS } from '../../lib/aiPrompts';
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -85,15 +86,28 @@ export default async function handler(req, res) {
       return res.status(200).json({ eligibility: mockEligibility });
     }
 
-    // Use OpenAI to analyze eligibility (when API key is available)
+    // Use structured prompt system for OpenAI
     try {
-      // Build structured prompt with tender + profile info for AI analysis
-      const tenderText = `Title: ${tender.title}\nDescription: ${tender.description}\nCategory: ${tender.category}\nRequirements: ${tender.requirements?.join(', ') || 'See description'}`;
-      const profileText = 
-        `Name: ${profile.name}\n` +
-        `Registration Number: ${profile.registration_number || 'Not provided'}\n` +
-        `Certifications: ${profile.certifications?.join(', ') || 'None'}\n` +
-        `Experience: ${profile.experience || 'Not provided'}`;
+      const context = {
+        tender: {
+          title: tender.title,
+          description: tender.description,
+          agency: tender.agency,
+          category: tender.category,
+          budget: tender.budget,
+          requirements: tender.requirements
+        },
+        company: {
+          name: profile.name,
+          registrationNumber: profile.registration_number,
+          certifications: profile.certifications,
+          experience: profile.experience,
+          contactEmail: profile.contact_email
+        }
+      };
+
+      const messages = buildPrompt('ELIGIBILITY_CHECK', context);
+      const config = TASK_CONFIGS.ELIGIBILITY_CHECK;
 
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: 'POST',
@@ -102,15 +116,8 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "user",
-              content: `Determine if the company is eligible for the tender. List key requirements from the tender and whether the company meets each.\n\nTender Details:\n${tenderText}\n\nCompany Profile:\n${profileText}\n\nProvide the answer as a JSON array of objects with "requirement" and "eligible" fields. Example: [{"requirement": "5+ years experience", "eligible": true}]`
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.5
+          ...config,
+          messages
         })
       });
 
@@ -119,17 +126,45 @@ export default async function handler(req, res) {
       }
 
       const data = await response.json();
-      let eligibilityList;
+      let eligibilityResult;
       
       try {
         const responseText = data.choices[0].message.content;
+        
+        // Validate the response
+        const validation = validateResponse(responseText, 'ELIGIBILITY_CHECK');
+        if (!validation.isValid) {
+          console.warn('AI response validation failed:', validation.issues);
+        }
+        
         // Try to extract JSON from the response
-        const jsonMatch = responseText.match(/\[.*\]/s);
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          eligibilityList = JSON.parse(jsonMatch[0]);
+          const parsedResult = JSON.parse(jsonMatch[0]);
+          
+          // Convert to the expected format
+          eligibilityResult = [];
+          
+          if (parsedResult.matched_criteria) {
+            parsedResult.matched_criteria.forEach(item => {
+              eligibilityResult.push({ requirement: item, eligible: true });
+            });
+          }
+          
+          if (parsedResult.missing_criteria) {
+            parsedResult.missing_criteria.forEach(item => {
+              eligibilityResult.push({ requirement: item, eligible: false });
+            });
+          }
+          
+          if (parsedResult.insufficient_data) {
+            parsedResult.insufficient_data.forEach(item => {
+              eligibilityResult.push({ requirement: item, eligible: false });
+            });
+          }
         } else {
           // If no JSON found, create a fallback response
-          eligibilityList = [
+          eligibilityResult = [
             { requirement: "General eligibility requirements", eligible: true },
             { requirement: "Technical and financial capabilities", eligible: true }
           ];
@@ -137,13 +172,13 @@ export default async function handler(req, res) {
       } catch (parseErr) {
         console.error("JSON parsing error:", parseErr);
         // Fallback eligibility response
-        eligibilityList = [
+        eligibilityResult = [
           { requirement: "Company meets basic tender requirements", eligible: true },
           { requirement: "Additional verification may be required", eligible: false }
         ];
       }
 
-      return res.status(200).json({ eligibility: eligibilityList });
+      return res.status(200).json({ eligibility: eligibilityResult });
     } catch (aiError) {
       console.error("AI eligibility check error:", aiError);
       // Fall back to mock response if AI fails

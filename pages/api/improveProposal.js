@@ -1,8 +1,9 @@
 // pages/api/improveProposal.js
-// API endpoint for AI-powered proposal improvement using Supabase data
+// API endpoint for AI-powered proposal improvement using structured prompts
 
 import { createClient } from '@supabase/supabase-js';
 import { tenderOperations, companyOperations } from '../../lib/database';
+import { buildPrompt, validateResponse, TASK_CONFIGS } from '../../lib/aiPrompts';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -49,12 +50,6 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Tender not found' });
     }
 
-    // Build context for AI improvement
-    const tenderContext = `Title: ${tender.title}\nDescription: ${tender.description}\nAgency: ${tender.agency}`;
-    const companyContext = profile ? 
-      `Company: ${profile.name}\nExperience: ${profile.experience}\nCertifications: ${profile.certifications?.join(', ') || 'None'}` :
-      'Company profile not available';
-
     // Mock AI improvement (in real app, would use OpenAI API)
     if (!process.env.OPENAI_API_KEY) {
       // Simulate AI improvement with enhanced content
@@ -91,8 +86,30 @@ Our key strengths include:
       });
     }
 
-    // Use OpenAI for real improvement (when API key is available)
+    // Use structured prompt system for OpenAI
     try {
+      const context = {
+        tender: {
+          title: tender.title,
+          description: tender.description,
+          agency: tender.agency,
+          category: tender.category,
+          budget: tender.budget,
+          requirements: tender.requirements
+        },
+        company: {
+          name: profile?.name,
+          registrationNumber: profile?.registration_number,
+          certifications: profile?.certifications,
+          experience: profile?.experience,
+          contactEmail: profile?.contact_email
+        },
+        proposalContent
+      };
+
+      const messages = buildPrompt('PROPOSAL_IMPROVEMENT', context);
+      const config = TASK_CONFIGS.PROPOSAL_IMPROVEMENT;
+
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: 'POST',
         headers: {
@@ -100,34 +117,8 @@ Our key strengths include:
           'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "user",
-              content: `You are an expert proposal writer. Improve the following tender proposal by making it more compelling, professional, and aligned with the tender requirements. Use the tender and company context provided.
-
-TENDER CONTEXT:
-${tenderContext}
-
-COMPANY CONTEXT:
-${companyContext}
-
-CURRENT PROPOSAL:
-${proposalContent}
-
-Please improve the proposal by:
-1. Enhancing the executive summary to be more compelling
-2. Strengthening the company background section
-3. Improving technical approach and methodology
-4. Making the language more professional and persuasive
-5. Better aligning content with tender requirements
-6. Ensuring all sections flow logically
-
-Return the improved proposal content.`
-            }
-          ],
-          max_tokens: 2000,
-          temperature: 0.7
+          ...config,
+          messages
         })
       });
 
@@ -138,6 +129,12 @@ Return the improved proposal content.`
       const data = await response.json();
       const improvedContent = data.choices[0].message.content.trim();
       
+      // Validate the response
+      const validation = validateResponse(improvedContent, 'PROPOSAL_IMPROVEMENT');
+      if (!validation.isValid) {
+        console.warn('AI response validation failed:', validation.issues);
+      }
+      
       return res.status(200).json({ 
         improvedContent,
         improvements: [
@@ -145,7 +142,8 @@ Return the improved proposal content.`
           'Improved technical approach',
           'Strengthened value proposition',
           'Better alignment with requirements'
-        ]
+        ],
+        validation: validation.isValid ? 'passed' : 'warning'
       });
     } catch (aiError) {
       console.error('AI improvement error:', aiError);
