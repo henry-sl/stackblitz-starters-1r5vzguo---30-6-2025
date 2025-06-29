@@ -1,6 +1,6 @@
 // pages/proposals/edit/[id].js
 // Enhanced proposal editor page with AI improvement insights
-// Added detailed insights panel showing what changes were made and why
+// Added translation of AI improvement explanations to English
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -50,6 +50,7 @@ export default function ProposalEditorPage() {
   // AI Improvement Insights state
   const [showImprovementInsights, setShowImprovementInsights] = useState(false);
   const [aiInsights, setAiInsights] = useState([]);
+  const [isTranslatingInsights, setIsTranslatingInsights] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -244,7 +245,47 @@ export default function ProposalEditorPage() {
     addToast('Proposal saved successfully!', 'success');
   };
 
-  // AI Improve functionality with insights
+  // Translate AI insights explanations to English
+  const translateInsightsToEnglish = async (insights) => {
+    if (!insights || insights.length === 0) return insights;
+
+    try {
+      setIsTranslatingInsights(true);
+      
+      const translatedInsights = await Promise.all(
+        insights.map(async (insight) => {
+          try {
+            // Translate the explanation from Malay to English
+            const result = await api('/api/translate', {
+              method: 'POST',
+              body: { 
+                text: insight.explanation, 
+                targetLang: 'en' 
+              }
+            });
+
+            return {
+              ...insight,
+              explanation: result.translatedText // Replace with English explanation
+            };
+          } catch (error) {
+            console.error('Failed to translate insight explanation:', error);
+            // Return original insight if translation fails
+            return insight;
+          }
+        })
+      );
+
+      return translatedInsights;
+    } catch (error) {
+      console.error('Error translating insights:', error);
+      return insights; // Return original insights if translation fails
+    } finally {
+      setIsTranslatingInsights(false);
+    }
+  };
+
+  // AI Improve functionality with insights and translation
   const handleImproveProposal = async () => {
     if (!proposal?.tenderId) {
       addToast('Unable to improve proposal - tender information missing', 'error');
@@ -262,7 +303,11 @@ export default function ProposalEditorPage() {
       });
       
       setContent(result.improvedContent);
-      setAiInsights(result.insights || []);
+      
+      // Translate insights explanations to English
+      const translatedInsights = await translateInsightsToEnglish(result.insights || []);
+      setAiInsights(translatedInsights);
+      
       setHasUnsavedChanges(true);
       setShowImprovementInsights(true);
       addToast('Proposal improved successfully!', 'success');
@@ -594,6 +639,12 @@ export default function ProposalEditorPage() {
                   <CardTitle className="flex items-center space-x-2 text-green-900">
                     <Lightbulb className="w-5 h-5" />
                     <span>AI Improvement Insights</span>
+                    {isTranslatingInsights && (
+                      <div className="flex items-center space-x-2 text-sm text-green-700">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>Translating explanations...</span>
+                      </div>
+                    )}
                   </CardTitle>
                   <Button
                     variant="ghost"
