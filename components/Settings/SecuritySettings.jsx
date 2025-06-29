@@ -154,6 +154,36 @@ export default function SecuritySettings() {
         )}
       </div>
 
+      {/* Sign Out Section - Moved here for better visibility */}
+      <div className="border border-red-200 rounded-lg p-6 bg-red-50">
+        <div className="flex items-center space-x-3 mb-4">
+          <ArrowRightOnRectangleIcon className="h-5 w-5 text-red-600" />
+          <h4 className="text-md font-medium text-red-800">Sign Out</h4>
+        </div>
+        
+        <p className="text-sm text-red-700 mb-4">
+          Sign out of your Tenderly account. You will need to log in again to access your account.
+        </p>
+        
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {signingOut ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Signing Out...
+            </>
+          ) : (
+            <>
+              <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
+              Sign Out
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Two-Factor Authentication */}
       <div className="border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
@@ -230,36 +260,6 @@ export default function SecuritySettings() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Sign Out Section */}
-      <div className="border border-red-200 rounded-lg p-6 bg-red-50">
-        <div className="flex items-center space-x-3 mb-4">
-          <ArrowRightOnRectangleIcon className="h-5 w-5 text-red-600" />
-          <h4 className="text-md font-medium text-red-800">Sign Out</h4>
-        </div>
-        
-        <p className="text-sm text-red-700 mb-4">
-          Sign out of your Tenderly account. You will need to log in again to access your account.
-        </p>
-        
-        <button
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {signingOut ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Signing Out...
-            </>
-          ) : (
-            <>
-              <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
-              Sign Out
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
