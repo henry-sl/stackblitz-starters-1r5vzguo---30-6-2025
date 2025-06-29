@@ -62,21 +62,20 @@ export default function ProposalsPage() {
       });
 
       addToast('Proposal deleted successfully!', 'success');
-      setShowDeleteModal(false);
-      setProposalToDelete(null);
     } catch (error) {
       console.error('Error deleting proposal:', error);
       
       // Check if it's a 404 error (already deleted)
       if (error.message.includes('Proposal not found') || error.message.includes('404')) {
         addToast('Proposal was already deleted', 'info');
-        setShowDeleteModal(false);
-        setProposalToDelete(null);
       } else {
         addToast('Failed to delete proposal', 'error');
       }
     } finally {
+      // Always reset modal state and refresh data, regardless of success or failure
       setIsDeleting(false);
+      setShowDeleteModal(false);
+      setProposalToDelete(null);
       // Always refresh the proposals list to sync with database state
       mutate();
     }
