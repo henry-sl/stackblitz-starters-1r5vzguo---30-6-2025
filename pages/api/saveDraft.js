@@ -1,10 +1,10 @@
 // pages/api/saveDraft.js
-// This API endpoint saves updates to a proposal draft
-// It uses the updateProposal function from the store module
+// API endpoint for saving proposal draft updates to Supabase database
 
-import { updateProposal } from '../../lib/store';
+import { createClient } from '@supabase/supabase-js';
+import { proposalOperations } from '../../lib/database';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,21 +18,51 @@ export default function handler(req, res) {
   }
 
   try {
-    // Update the proposal with new content
-    const updatedProposal = updateProposal(proposalId, { 
-      content,
-      updatedAt: new Date().toISOString()
-    });
+    // Get the authorization token from the request headers
+    const token = req.headers.authorization?.replace('Bearer ', '');
     
-    // Return 404 if proposal not found
+    if (!token) {
+      return res.status(401).json({ error: 'No authorization token provided' });
+    }
+
+    // Validate environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // Verify the JWT token and get user information
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Update the proposal with new content
+    const updatedProposal = await proposalOperations.update(
+      supabase, 
+      proposalId, 
+      user.id, 
+      { content }
+    );
+    
     if (!updatedProposal) {
-      return res.status(404).json({ error: 'Proposal not found' });
+      return res.status(404).json({ error: 'Proposal not found or access denied' });
     }
 
     // Return success response
     res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error saving draft:', error);
-    res.status(500).json({ error: 'Failed to save draft' });
+    if (error.code === 'PGRST116') {
+      res.status(404).json({ error: 'Proposal not found or access denied' });
+    } else {
+      res.status(500).json({ error: 'Failed to save draft' });
+    }
   }
 }

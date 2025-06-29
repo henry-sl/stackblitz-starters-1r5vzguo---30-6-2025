@@ -1,8 +1,8 @@
 // pages/api/improveProposal.js
-// API endpoint for AI-powered proposal improvement
-// Uses tender context, proposal content, and company profile to enhance proposals
+// API endpoint for AI-powered proposal improvement using Supabase data
 
-import { getTenderById, getCompanyProfile } from '../../lib/store';
+import { createClient } from '@supabase/supabase-js';
+import { tenderOperations, companyOperations } from '../../lib/database';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -16,16 +16,41 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get the authorization token from the request headers
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No authorization token provided' });
+    }
+
+    // Validate environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // Verify the JWT token and get user information
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
     // Get tender details and company profile for context
-    const tender = getTenderById(tenderId);
-    const profile = getCompanyProfile();
+    const tender = await tenderOperations.getById(supabase, tenderId);
+    const profile = await companyOperations.getProfile(supabase, user.id);
     
     if (!tender) {
       return res.status(404).json({ error: 'Tender not found' });
     }
 
     // Build context for AI improvement
-    const tenderContext = `Title: ${tender.title}\nDescription: ${tender.description}`;
+    const tenderContext = `Title: ${tender.title}\nDescription: ${tender.description}\nAgency: ${tender.agency}`;
     const companyContext = profile ? 
       `Company: ${profile.name}\nExperience: ${profile.experience}\nCertifications: ${profile.certifications?.join(', ') || 'None'}` :
       'Company profile not available';
@@ -67,21 +92,22 @@ Our key strengths include:
     }
 
     // Use Claude AI for real improvement (when API key is available)
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: "claude-3-sonnet-20240229",
-        max_tokens: 2000,
-        temperature: 0.7,
-        messages: [
-          {
-            role: "user",
-            content: `You are an expert proposal writer. Improve the following tender proposal by making it more compelling, professional, and aligned with the tender requirements. Use the tender and company context provided.
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: "claude-3-sonnet-20240229",
+          max_tokens: 2000,
+          temperature: 0.7,
+          messages: [
+            {
+              role: "user",
+              content: `You are an expert proposal writer. Improve the following tender proposal by making it more compelling, professional, and aligned with the tender requirements. Use the tender and company context provided.
 
 TENDER CONTEXT:
 ${tenderContext}
@@ -101,27 +127,35 @@ Please improve the proposal by:
 6. Ensuring all sections flow logically
 
 Return the improved proposal content.`
-          }
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const improvedContent = data.content[0].text.trim();
+      
+      return res.status(200).json({ 
+        improvedContent,
+        improvements: [
+          'Enhanced executive summary',
+          'Improved technical approach',
+          'Strengthened value proposition',
+          'Better alignment with requirements'
         ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI API error: ${response.status}`);
+      });
+    } catch (aiError) {
+      console.error('AI improvement error:', aiError);
+      // Fall back to mock improvement
+      return res.status(200).json({ 
+        improvedContent: proposalContent + '\n\n*AI improvement service temporarily unavailable*',
+        improvements: ['AI service unavailable - no changes made']
+      });
     }
-
-    const data = await response.json();
-    const improvedContent = data.content[0].text.trim();
-    
-    return res.status(200).json({ 
-      improvedContent,
-      improvements: [
-        'Enhanced executive summary',
-        'Improved technical approach',
-        'Strengthened value proposition',
-        'Better alignment with requirements'
-      ]
-    });
   } catch (error) {
     console.error('Proposal improvement error:', error);
     return res.status(500).json({ error: 'Failed to improve proposal' });

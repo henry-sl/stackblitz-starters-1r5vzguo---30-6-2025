@@ -1,6 +1,5 @@
 // pages/api/company.js
-// This API endpoint handles company profile operations with Supabase
-// Updated to use proper server-side JWT verification and enhanced error logging
+// API endpoint for company profile operations with improved field mapping
 
 import { createClient } from '@supabase/supabase-js';
 import { companyOperations } from '../../lib/database';
@@ -65,8 +64,27 @@ export default async function handler(req, res) {
           return res.status(200).json({});
         }
         
+        // Transform snake_case to camelCase for frontend
+        const transformedProfile = {
+          name: profile.name,
+          registrationNumber: profile.registration_number,
+          address: profile.address,
+          phone: profile.phone,
+          email: profile.email,
+          website: profile.website,
+          establishedYear: profile.established_year,
+          certifications: profile.certifications,
+          experience: profile.experience,
+          contactEmail: profile.contact_email,
+          contactPhone: profile.contact_phone,
+          specialties: profile.specialties,
+          teamSize: profile.team_size,
+          createdAt: profile.created_at,
+          updatedAt: profile.updated_at
+        };
+        
         console.log('[Company API] Profile found, returning data');
-        res.status(200).json(profile);
+        res.status(200).json(transformedProfile);
       } catch (error) {
         console.error('[Company API] Error fetching company profile:', error);
         console.error('[Company API] Error details:', {
@@ -96,8 +114,27 @@ export default async function handler(req, res) {
         console.log('[Company API] Updating company profile');
         const updatedProfile = await companyOperations.upsertProfile(supabaseServiceRole, user.id, updates);
         
+        // Transform snake_case to camelCase for frontend response
+        const transformedProfile = {
+          name: updatedProfile.name,
+          registrationNumber: updatedProfile.registration_number,
+          address: updatedProfile.address,
+          phone: updatedProfile.phone,
+          email: updatedProfile.email,
+          website: updatedProfile.website,
+          establishedYear: updatedProfile.established_year,
+          certifications: updatedProfile.certifications,
+          experience: updatedProfile.experience,
+          contactEmail: updatedProfile.contact_email,
+          contactPhone: updatedProfile.contact_phone,
+          specialties: updatedProfile.specialties,
+          teamSize: updatedProfile.team_size,
+          createdAt: updatedProfile.created_at,
+          updatedAt: updatedProfile.updated_at
+        };
+        
         console.log('[Company API] Profile updated successfully');
-        res.status(200).json(updatedProfile);
+        res.status(200).json(transformedProfile);
       } catch (error) {
         console.error('[Company API] Error updating company profile:', error);
         console.error('[Company API] Error details:', {

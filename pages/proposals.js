@@ -1,11 +1,12 @@
 // pages/proposals.js
-// Proposals listing page showing all user proposals with status and actions
-// Provides clear guidance when no proposals exist
+// Proposals listing page using Supabase data with SWR
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
+import useSWR from 'swr';
+import { fetcher } from '../lib/api';
 import { 
   DocumentTextIcon,
   PencilSquareIcon,
@@ -15,13 +16,10 @@ import {
   PlusIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { getAllProposals } from '../lib/store';
 
 export default function ProposalsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [proposals, setProposals] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -30,25 +28,11 @@ export default function ProposalsPage() {
     }
   }, [user, authLoading, router]);
 
-  // Load proposals when component mounts
-  useEffect(() => {
-    if (user) {
-      loadProposals();
-    }
-  }, [user]);
-
-  const loadProposals = async () => {
-    try {
-      setLoading(true);
-      // Get all proposals from the store
-      const allProposals = getAllProposals();
-      setProposals(allProposals);
-    } catch (error) {
-      console.error('Error loading proposals:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch proposals using SWR
+  const { data: proposals, error, isLoading } = useSWR(
+    user ? '/api/proposals' : null,
+    fetcher
+  );
 
   // Get status badge styling
   const getStatusBadge = (status) => {
@@ -79,7 +63,7 @@ export default function ProposalsPage() {
   };
 
   // Show loading state
-  if (authLoading || loading) {
+  if (authLoading || isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
@@ -106,6 +90,17 @@ export default function ProposalsPage() {
     return null;
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-8">
+          <p className="text-red-600">Failed to load proposals. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
@@ -117,7 +112,7 @@ export default function ProposalsPage() {
       </div>
 
       {/* Proposals List */}
-      {proposals.length > 0 ? (
+      {proposals && proposals.length > 0 ? (
         <div className="space-y-6">
           {proposals.map((proposal) => {
             const statusBadge = getStatusBadge(proposal.status);
@@ -130,14 +125,21 @@ export default function ProposalsPage() {
                     <div className="flex items-center space-x-3 mb-2">
                       <DocumentTextIcon className="h-5 w-5 text-gray-400" />
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {proposal.tenderTitle}
+                        {/* Use nested tender data or fallback to tenderTitle */}
+                        {proposal.tenders?.title || proposal.tenderTitle}
                       </h3>
                     </div>
                     
                     <div className="text-sm text-gray-600 space-y-1">
+                      {proposal.tenders?.agency && (
+                        <p>Agency: {proposal.tenders.agency}</p>
+                      )}
                       <p>Created: {formatDate(proposal.createdAt)}</p>
                       <p>Last updated: {formatDate(proposal.updatedAt)}</p>
                       <p>Version: {proposal.version}</p>
+                      {proposal.tenders?.closing_date && (
+                        <p>Tender closes: {formatDate(proposal.tenders.closing_date)}</p>
+                      )}
                     </div>
                   </div>
                   
@@ -189,9 +191,9 @@ export default function ProposalsPage() {
             <div className="flex items-start space-x-2">
               <ExclamationTriangleIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-left">
-                <h4 className="text-sm font-medium text-blue-900 mb-1">Development Note</h4>
+                <h4 className="text-sm font-medium text-blue-900 mb-1">Database Integration</h4>
                 <p className="text-sm text-blue-800">
-                  Proposals are stored in memory during development and will be reset when the server restarts.
+                  Proposals are now stored in Supabase database and will persist across sessions.
                 </p>
               </div>
             </div>

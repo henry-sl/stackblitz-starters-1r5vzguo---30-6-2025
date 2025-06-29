@@ -1,6 +1,5 @@
 // pages/reputation.js
-// Updated reputation page with new modern design
-// Converted from React Router to Next.js routing
+// Reputation page using Supabase data with SWR
 
 import React from 'react';
 import useSWR from 'swr';
@@ -22,7 +21,7 @@ const reputationMetrics = {
 };
 
 export default function ReputationPage() {
-  // Fetch attestations data from the API
+  // Fetch attestations data from the API using SWR
   const { data: attestations, error, isLoading } = useSWR('/api/attestations', fetcher);
 
   const getAlgorandExplorerUrl = (transactionId) => {
