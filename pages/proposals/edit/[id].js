@@ -1,6 +1,6 @@
 // pages/proposals/edit/[id].js
-// Enhanced proposal editor page with database integration for versioning and AI assistant
-// Autosave disabled, version viewing enabled, AI chatbot integrated
+// Enhanced proposal editor page with floating AI assistant bubble
+// Autosave disabled, version viewing enabled, AI chatbot integrated as floating bubble
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -14,7 +14,7 @@ import AutosaveIndicator from '../../../components/ProposalEditor/AutosaveIndica
 import ToolbarSection from '../../../components/ProposalEditor/ToolbarSection';
 import ContentArea from '../../../components/ProposalEditor/ContentArea';
 import ExportControls from '../../../components/ProposalEditor/ExportControls';
-import ProposalAIAssistant from '../../../components/ProposalEditor/ProposalAIAssistant';
+import FloatingAIAssistant from '../../../components/ProposalEditor/FloatingAIAssistant';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
@@ -527,8 +527,8 @@ export default function ProposalEditorPage() {
           ? 'grid grid-cols-1 gap-0 h-full' 
           : 'grid grid-cols-1 lg:grid-cols-4 gap-8'
       }`}>
-        {/* Main Editor - Now takes 3/4 of the space */}
-        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-3'}>
+        {/* Main Editor - Now takes full width */}
+        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-4'}>
           <Card className={`${
             isFullScreen 
               ? 'h-full border-0 shadow-none rounded-none' 
@@ -583,153 +583,17 @@ export default function ProposalEditorPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Sidebar - Now takes 1/4 of the space */}
-        {!isFullScreen && (
-          <div className="lg:col-span-1 space-y-6">
-            {/* AI Assistant - Smaller height */}
-            <div className="h-[400px]">
-              <ProposalAIAssistant
-                tenderId={tender?.id}
-                proposalId={proposal?.id}
-                currentProposalContent={content}
-                onUpdateProposalContent={handleContentChange}
-              />
-            </div>
-
-            {/* Quick Insert */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Building2 className="w-5 h-5" />
-                  <span>Quick Insert</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => insertCompanyInfo('background')}
-                  disabled={isSubmitted || !companyProfile}
-                >
-                  Company Background
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => insertCompanyInfo('certifications')}
-                  disabled={isSubmitted || !companyProfile}
-                >
-                  Certifications
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => insertCompanyInfo('experience')}
-                  disabled={isSubmitted || !companyProfile}
-                >
-                  Past Experience
-                </Button>
-                {!companyProfile && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Complete your company profile to enable quick insert
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Submit Proposal */}
-            <Card className="border-green-200 bg-green-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-green-900">
-                  <Shield className="w-5 h-5" />
-                  <span>Submit Proposal</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-2 text-sm">
-                    <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
-                    <p className="text-gray-700">
-                      Submitting will record your proposal on the Algorand blockchain and lock further edits.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Proposal content ready</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Company profile complete</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>All requirements met</span>
-                    </div>
-                  </div>
-
-                  <Button 
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={handleSubmitProposal}
-                    disabled={isSubmitting || isSubmitted || !content.trim()}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Submitting to Blockchain...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Submit Proposal
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tender Reference */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Tender Reference</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {tender ? (
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-gray-500">Budget:</span>
-                      <p className="font-semibold">{tender.budget || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Closing:</span>
-                      <p className="font-semibold">{tender.closingDate ? format(new Date(tender.closingDate), "MMM d, yyyy") : 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Category:</span>
-                      <p className="font-semibold">{tender.category}</p>
-                    </div>
-                    <Link href={`/tenders/${tender.id}`} className="block mt-3">
-                      <Button variant="outline" size="sm" className="w-full">
-                        View Full Tender
-                      </Button>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500">Loading tender details...</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
+
+      {/* Floating AI Assistant - Only visible when not in full screen and not submitted */}
+      {!isFullScreen && !isSubmitted && (
+        <FloatingAIAssistant
+          tenderId={tender?.id}
+          proposalId={proposal?.id}
+          currentProposalContent={content}
+          onUpdateProposalContent={handleContentChange}
+        />
+      )}
     </div>
   );
 }
