@@ -1,5 +1,6 @@
 // pages/proposals/edit/[id].js
 // Enhanced proposal editor page with database integration for versioning and quick insert
+// Autosave disabled, version viewing enabled
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -147,7 +148,7 @@ export default function ProposalEditorPage() {
     loadProposal();
   };
 
-  // Autosave functionality
+  // Manual save functionality (autosave disabled)
   const saveContent = useCallback(async () => {
     if (!id || !user || !hasUnsavedChanges) return;
 
@@ -167,26 +168,26 @@ export default function ProposalEditorPage() {
       mutateVersions();
     } catch (error) {
       setSaveStatus('error');
-      console.error('Autosave failed:', error);
+      console.error('Save failed:', error);
     }
   }, [id, content, user, hasUnsavedChanges, mutateVersions]);
 
-  // Autosave timer
-  useEffect(() => {
-    if (!hasUnsavedChanges || !user) return;
+  // AUTOSAVE DISABLED: Commented out the autosave timer
+  // useEffect(() => {
+  //   if (!hasUnsavedChanges || !user) return;
 
-    const timer = setTimeout(() => {
-      saveContent();
-    }, 2000);
+  //   const timer = setTimeout(() => {
+  //     saveContent();
+  //   }, 2000);
 
-    return () => clearTimeout(timer);
-  }, [content, hasUnsavedChanges, saveContent, user]);
+  //   return () => clearTimeout(timer);
+  // }, [content, hasUnsavedChanges, saveContent, user]);
 
   // Handle content changes
   const handleContentChange = (newContent) => {
     setContent(newContent);
     setHasUnsavedChanges(true);
-    setSaveStatus('saving');
+    setSaveStatus('unsaved');
   };
 
   // Handle formatting commands
@@ -310,6 +311,13 @@ export default function ProposalEditorPage() {
         textarea.setSelectionRange(cursorPosition + insertion.length, cursorPosition + insertion.length);
       }, 0);
     }
+  };
+
+  // Load version content into editor
+  const handleViewVersion = (version) => {
+    setContent(version.content);
+    setHasUnsavedChanges(true);
+    addToast(`Loaded version ${version.version} into editor`, 'success');
   };
 
   // Toggle full screen mode
@@ -502,7 +510,10 @@ export default function ProposalEditorPage() {
                   <span>Saved {format(new Date(lastSaved), "HH:mm")}</span>
                 </span>
               )}
-              <Button variant="outline" onClick={handleManualSave}>
+              {hasUnsavedChanges && (
+                <span className="text-sm text-amber-600">Unsaved changes</span>
+              )}
+              <Button variant="outline" onClick={handleManualSave} disabled={!hasUnsavedChanges}>
                 Save Draft
               </Button>
             </div>
@@ -636,7 +647,12 @@ export default function ProposalEditorPage() {
                           <p className="text-sm font-medium">Version {version.version}</p>
                           <p className="text-xs text-gray-500">{format(new Date(version.createdAt), "MMM d, HH:mm")}</p>
                         </div>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewVersion(version)}
+                          disabled={isSubmitted}
+                        >
                           View
                         </Button>
                       </div>
