@@ -1,6 +1,6 @@
 // pages/api/improveProposal.js
 // API endpoint for AI-powered proposal improvement using structured prompts
-// Fixed JSON parsing and language detection issues
+// Enhanced language detection with better accuracy
 
 import { createClient } from '@supabase/supabase-js';
 import { tenderOperations, companyOperations } from '../../lib/database';
@@ -18,90 +18,128 @@ function sanitizeJsonString(str) {
     .replace(/\b/g, '\\b');  // Escape backspaces
 }
 
-// Enhanced language detection function
+// Significantly enhanced language detection function
 function detectLanguage(text) {
   if (!text || typeof text !== 'string') return 'en';
   
-  // Clean text for analysis
-  const cleanText = text.toLowerCase().replace(/[^\w\s]/g, ' ');
+  // Clean text for analysis - remove markdown, punctuation, but keep structure
+  const cleanText = text.toLowerCase()
+    .replace(/[#*\-_`]/g, ' ')  // Remove markdown
+    .replace(/[^\w\s]/g, ' ')   // Remove punctuation but keep words and spaces
+    .replace(/\s+/g, ' ')       // Normalize whitespace
+    .trim();
   
-  // More comprehensive Malay words and patterns
-  const malayWords = [
-    // Common words
-    'dan', 'atau', 'dengan', 'untuk', 'dalam', 'pada', 'dari', 'ke', 'yang', 'adalah',
-    'akan', 'telah', 'sudah', 'belum', 'tidak', 'bukan', 'juga', 'hanya', 'dapat',
-    'ini', 'itu', 'mereka', 'kami', 'kita', 'saya', 'anda', 'dia', 'ia',
-    // Business/tender specific
-    'syarikat', 'projek', 'cadangan', 'kepada', 'daripada', 'keperluan', 'pengalaman',
-    'perkhidmatan', 'penyelenggaraan', 'pembinaan', 'kerajaan', 'tender', 'kontrak',
-    'latar', 'belakang', 'sijil', 'pensijilan', 'ringkasan', 'eksekutif',
-    'bahagian', 'diperkukuhkan', 'disusun', 'semula', 'maklumat', 'tambahan',
-    'mengenai', 'meningkatkan', 'kredibiliti', 'menunjukkan', 'kesesuaian',
-    'menggunakan', 'bahasa', 'perniagaan', 'formal', 'persepsi', 'positif',
-    'terhadap', 'komitmen', 'standard', 'tinggi'
-  ];
+  // Split into words for analysis
+  const words = cleanText.split(' ').filter(word => word.length > 1);
   
-  // More comprehensive English words
-  const englishWords = [
-    // Common words
-    'the', 'and', 'or', 'with', 'for', 'in', 'on', 'from', 'to', 'that', 'is',
-    'will', 'has', 'have', 'not', 'also', 'only', 'can', 'this', 'they', 'we',
-    'our', 'you', 'your', 'his', 'her', 'its', 'their',
-    // Business/tender specific
-    'company', 'project', 'proposal', 'requirements', 'experience', 'services',
-    'maintenance', 'construction', 'government', 'tender', 'contract',
-    'background', 'certifications', 'executive', 'summary', 'enhanced',
-    'strengthened', 'reorganized', 'additional', 'information', 'about',
-    'increase', 'credibility', 'demonstrate', 'suitability', 'using',
-    'language', 'business', 'formal', 'perception', 'positive', 'towards',
-    'commitment', 'standards', 'high'
-  ];
+  if (words.length === 0) return 'en';
   
-  // Count word matches with higher weight for longer words
+  // Comprehensive Malay word list with weights
+  const malayWords = {
+    // High-weight Malay-specific words (very unlikely to appear in English)
+    'adalah': 5, 'dengan': 5, 'untuk': 5, 'dalam': 5, 'pada': 5, 'dari': 5, 'yang': 5,
+    'akan': 5, 'telah': 5, 'sudah': 5, 'belum': 5, 'tidak': 5, 'bukan': 5,
+    'kami': 5, 'kita': 5, 'mereka': 5, 'anda': 5, 'saya': 5,
+    'syarikat': 5, 'projek': 5, 'cadangan': 5, 'kepada': 5, 'daripada': 5,
+    'keperluan': 5, 'pengalaman': 5, 'perkhidmatan': 5, 'penyelenggaraan': 5,
+    'pembinaan': 5, 'kerajaan': 5, 'kontrak': 5, 'latar': 5, 'belakang': 5,
+    'sijil': 5, 'pensijilan': 5, 'ringkasan': 5, 'eksekutif': 5,
+    'bahagian': 5, 'diperkukuhkan': 5, 'disusun': 5, 'semula': 5,
+    'maklumat': 5, 'tambahan': 5, 'mengenai': 5, 'meningkatkan': 5,
+    'kredibiliti': 5, 'menunjukkan': 5, 'kesesuaian': 5, 'menggunakan': 5,
+    'bahasa': 5, 'perniagaan': 5, 'formal': 5, 'persepsi': 5, 'positif': 5,
+    'terhadap': 5, 'komitmen': 5, 'standard': 5, 'tinggi': 5,
+    
+    // Medium-weight words (common Malay words)
+    'dan': 3, 'atau': 3, 'juga': 3, 'hanya': 3, 'dapat': 3,
+    'ini': 3, 'itu': 3, 'dia': 3, 'ia': 3, 'tender': 2,
+    
+    // Lower-weight words (could appear in both languages but more common in Malay)
+    'berhad': 2, 'sdn': 2
+  };
+  
+  // Comprehensive English word list with weights
+  const englishWords = {
+    // High-weight English-specific words
+    'the': 5, 'and': 5, 'with': 5, 'for': 5, 'from': 5, 'that': 5, 'this': 5,
+    'will': 5, 'has': 5, 'have': 5, 'not': 5, 'also': 5, 'only': 5, 'can': 5,
+    'they': 5, 'our': 5, 'you': 5, 'your': 5, 'his': 5, 'her': 5, 'its': 5, 'their': 5,
+    'company': 5, 'project': 5, 'proposal': 5, 'requirements': 5, 'experience': 5,
+    'services': 5, 'maintenance': 5, 'construction': 5, 'government': 5, 'contract': 5,
+    'background': 5, 'certifications': 5, 'executive': 5, 'summary': 5,
+    'enhanced': 5, 'strengthened': 5, 'reorganized': 5, 'additional': 5,
+    'information': 5, 'about': 5, 'increase': 5, 'credibility': 5,
+    'demonstrate': 5, 'suitability': 5, 'using': 5, 'language': 5,
+    'business': 5, 'formal': 5, 'perception': 5, 'positive': 5,
+    'towards': 5, 'commitment': 5, 'standards': 5, 'high': 5,
+    'we': 5, 'are': 5, 'is': 5, 'to': 5, 'of': 5, 'in': 5, 'on': 5,
+    'as': 5, 'be': 5, 'by': 5, 'at': 5, 'an': 5, 'or': 5, 'if': 5,
+    
+    // Medium-weight words
+    'tender': 2, 'limited': 3, 'ltd': 3, 'inc': 3, 'corporation': 3,
+    
+    // Common English business terms
+    'solutions': 4, 'professional': 4, 'quality': 4, 'management': 4,
+    'technical': 4, 'approach': 4, 'methodology': 4, 'implementation': 4
+  };
+  
+  // Count weighted word matches
   let malayScore = 0;
   let englishScore = 0;
+  let totalWords = words.length;
   
-  malayWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'g');
-    const matches = cleanText.match(regex);
-    if (matches) {
-      // Give higher weight to longer, more specific words
-      const weight = word.length > 5 ? 2 : 1;
-      malayScore += matches.length * weight;
+  words.forEach(word => {
+    if (malayWords[word]) {
+      malayScore += malayWords[word];
+    }
+    if (englishWords[word]) {
+      englishScore += englishWords[word];
     }
   });
   
-  englishWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'g');
-    const matches = cleanText.match(regex);
-    if (matches) {
-      // Give higher weight to longer, more specific words
-      const weight = word.length > 5 ? 2 : 1;
-      englishScore += matches.length * weight;
-    }
-  });
+  // Additional pattern-based scoring
+  const textLower = cleanText;
   
-  // Additional checks for language patterns
+  // English patterns (strong indicators)
+  if (textLower.includes('we are') || textLower.includes('our company')) englishScore += 10;
+  if (textLower.includes('the company') || textLower.includes('the project')) englishScore += 8;
+  if (textLower.includes('has been') || textLower.includes('have been')) englishScore += 8;
+  if (textLower.includes('will be') || textLower.includes('can be')) englishScore += 6;
+  if (textLower.includes('is a') || textLower.includes('are a')) englishScore += 6;
   
-  // Check for Malay-specific patterns
-  if (cleanText.includes('sdn bhd') || cleanText.includes('berhad')) malayScore += 3;
-  if (cleanText.includes('yang') && cleanText.includes('adalah')) malayScore += 2;
-  if (cleanText.includes('kepada') || cleanText.includes('daripada')) malayScore += 2;
+  // Malay patterns (strong indicators)
+  if (textLower.includes('telah diperkukuhkan') || textLower.includes('telah ditambah')) malayScore += 15;
+  if (textLower.includes('yang telah') || textLower.includes('yang akan')) malayScore += 10;
+  if (textLower.includes('kami adalah') || textLower.includes('syarikat kami')) malayScore += 10;
+  if (textLower.includes('dengan pengalaman') || textLower.includes('dalam bidang')) malayScore += 8;
   
-  // Check for English-specific patterns
-  if (cleanText.includes('ltd') || cleanText.includes('limited') || cleanText.includes('inc')) englishScore += 3;
-  if (cleanText.includes('the') && cleanText.includes('and')) englishScore += 2;
-  if (cleanText.includes('we are') || cleanText.includes('our company')) englishScore += 2;
+  // Business entity indicators (lower weight to avoid false positives)
+  if (textLower.includes('sdn bhd') || textLower.includes('berhad')) malayScore += 3;
+  if (textLower.includes('ltd') || textLower.includes('limited') || textLower.includes('inc')) englishScore += 3;
   
-  console.log(`[Language Detection] Malay score: ${malayScore}, English score: ${englishScore}`);
+  // Calculate percentages for better decision making
+  const totalScore = malayScore + englishScore;
+  const malayPercentage = totalScore > 0 ? (malayScore / totalScore) * 100 : 0;
+  const englishPercentage = totalScore > 0 ? (englishScore / totalScore) * 100 : 0;
   
-  // Return detected language with a minimum threshold
-  if (malayScore > englishScore && malayScore > 2) {
-    return 'ms';
-  } else if (englishScore > malayScore && englishScore > 2) {
+  console.log(`[Language Detection] Text: "${text.substring(0, 100)}..."`);
+  console.log(`[Language Detection] Words analyzed: ${totalWords}`);
+  console.log(`[Language Detection] Malay score: ${malayScore} (${malayPercentage.toFixed(1)}%)`);
+  console.log(`[Language Detection] English score: ${englishScore} (${englishPercentage.toFixed(1)}%)`);
+  
+  // Decision logic with higher threshold for confidence
+  if (totalScore < 5) {
+    // Very low scores - default to English for business contexts
+    console.log(`[Language Detection] Low confidence scores, defaulting to English`);
     return 'en';
+  }
+  
+  // Require significant dominance (at least 60% vs 40%) to classify as Malay
+  if (malayScore > englishScore && malayPercentage >= 60) {
+    console.log(`[Language Detection] Detected as Malay with ${malayPercentage.toFixed(1)}% confidence`);
+    return 'ms';
   } else {
-    // Default to English if scores are too close or too low
+    console.log(`[Language Detection] Detected as English with ${englishPercentage.toFixed(1)}% confidence`);
     return 'en';
   }
 }
@@ -153,7 +191,7 @@ export default async function handler(req, res) {
 
     // Detect the language of the input content
     const detectedLanguage = detectLanguage(proposalContent);
-    console.log(`[Improve Proposal] Detected language: ${detectedLanguage} for content: "${proposalContent.substring(0, 100)}..."`);
+    console.log(`[Improve Proposal] Final detected language: ${detectedLanguage}`);
 
     // Mock AI improvement (preserves input language)
     if (!process.env.OPENAI_API_KEY) {
