@@ -527,8 +527,8 @@ export default function ProposalEditorPage() {
           ? 'grid grid-cols-1 gap-0 h-full' 
           : 'grid grid-cols-1 lg:grid-cols-4 gap-8'
       }`}>
-        {/* Main Editor */}
-        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-2'}>
+        {/* Main Editor - Now takes 3/4 of the space */}
+        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-3'}>
           <Card className={`${
             isFullScreen 
               ? 'h-full border-0 shadow-none rounded-none' 
@@ -584,11 +584,11 @@ export default function ProposalEditorPage() {
           </Card>
         </div>
 
-        {/* Sidebar - hidden in full screen */}
+        {/* Sidebar - Now takes 1/4 of the space */}
         {!isFullScreen && (
-          <div className="lg:col-span-2 space-y-6">
-            {/* AI Assistant - Full width in sidebar */}
-            <div className="h-[600px]">
+          <div className="lg:col-span-1 space-y-6">
+            {/* AI Assistant - Smaller height */}
+            <div className="h-[400px]">
               <ProposalAIAssistant
                 tenderId={tender?.id}
                 proposalId={proposal?.id}
