@@ -21,4 +21,3 @@ function getAdminWalletAddress() {
 }
 
 getAdminWalletAddress();
-console.log(account.addr);
