@@ -1,9 +1,51 @@
 // pages/api/company.js
-// API endpoint for company profile operations with enhanced field mapping
+// API endpoint for company profile operations with enhanced field mapping and data sanitization
 // Updated to support all the new fields from the detailed company profile
 
 import { createClient } from '@supabase/supabase-js';
 import { companyOperations } from '../../lib/database';
+
+// Helper function to sanitize experience text
+const sanitizeExperienceText = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  
+  // Remove common placeholder text patterns
+  const placeholderPatterns = [
+    /You can enter this information into the fields\s*\.?\s*/gi,
+    /\*\*Company Background:\*\*\s*/gi,
+    /\*\*Certifications:\*\*\s*/gi,
+    /\*\*Company Experience:\*\*\s*/gi,
+    /\*\*Experience:\*\*\s*/gi,
+    /Please complete your profile first\s*\.?\s*/gi,
+    /Enter your company information here\s*\.?\s*/gi,
+    /Add your company details\s*\.?\s*/gi,
+    /Complete your company profile\s*\.?\s*/gi,
+    // Remove duplicate company name patterns
+    /^([^.]+)\s+is\s+\1\s+/gi,
+    // Remove excessive whitespace and newlines
+    /\n\s*\n\s*\n/g,
+    /\s{3,}/g
+  ];
+  
+  let cleanedText = text;
+  
+  // Apply all sanitization patterns
+  placeholderPatterns.forEach(pattern => {
+    if (pattern.toString().includes('\\n')) {
+      cleanedText = cleanedText.replace(pattern, '\n\n');
+    } else {
+      cleanedText = cleanedText.replace(pattern, ' ');
+    }
+  });
+  
+  // Clean up extra whitespace and normalize
+  cleanedText = cleanedText
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Replace multiple newlines with double newline
+    .trim();
+  
+  return cleanedText;
+};
 
 export default async function handler(req, res) {
   console.log(`[Company API] ${req.method} request received`);
@@ -65,7 +107,7 @@ export default async function handler(req, res) {
           return res.status(200).json({});
         }
         
-        // Transform snake_case to camelCase for frontend with enhanced fields
+        // Transform snake_case to camelCase for frontend with enhanced fields and sanitization
         const transformedProfile = {
           name: profile.name,
           registrationNumber: profile.registration_number,
@@ -75,7 +117,7 @@ export default async function handler(req, res) {
           website: profile.website,
           establishedYear: profile.established_year,
           certifications: profile.certifications,
-          experience: profile.experience,
+          experience: sanitizeExperienceText(profile.experience), // Sanitize experience text
           contactEmail: profile.contact_email,
           contactPhone: profile.contact_phone,
           specialties: profile.specialties,
@@ -133,10 +175,15 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Company name is required' });
         }
         
+        // Sanitize experience text before saving
+        if (updates.experience) {
+          updates.experience = sanitizeExperienceText(updates.experience);
+        }
+        
         console.log('[Company API] Updating company profile');
         const updatedProfile = await companyOperations.upsertProfile(supabaseServiceRole, user.id, updates);
         
-        // Transform snake_case to camelCase for frontend response with enhanced fields
+        // Transform snake_case to camelCase for frontend response with enhanced fields and sanitization
         const transformedProfile = {
           name: updatedProfile.name,
           registrationNumber: updatedProfile.registration_number,
@@ -146,7 +193,7 @@ export default async function handler(req, res) {
           website: updatedProfile.website,
           establishedYear: updatedProfile.established_year,
           certifications: updatedProfile.certifications,
-          experience: updatedProfile.experience,
+          experience: sanitizeExperienceText(updatedProfile.experience), // Sanitize experience text
           contactEmail: updatedProfile.contact_email,
           contactPhone: updatedProfile.contact_phone,
           specialties: updatedProfile.specialties,

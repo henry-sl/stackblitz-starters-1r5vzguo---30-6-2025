@@ -1,12 +1,54 @@
 // components/Settings/ContactUpdate.jsx
 // Contact information update component that integrates with existing company profile API
-// Uses the same backend endpoints as the existing ProfileForm component
+// Uses the same backend endpoints as the existing ProfileForm component with data sanitization
 
 import React, { useState, useEffect } from 'react';
 import { UserIcon, EnvelopeIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { api } from '../../lib/api';
+
+// Helper function to sanitize experience text
+const sanitizeExperienceText = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  
+  // Remove common placeholder text patterns
+  const placeholderPatterns = [
+    /You can enter this information into the fields\s*\.?\s*/gi,
+    /\*\*Company Background:\*\*\s*/gi,
+    /\*\*Certifications:\*\*\s*/gi,
+    /\*\*Company Experience:\*\*\s*/gi,
+    /\*\*Experience:\*\*\s*/gi,
+    /Please complete your profile first\s*\.?\s*/gi,
+    /Enter your company information here\s*\.?\s*/gi,
+    /Add your company details\s*\.?\s*/gi,
+    /Complete your company profile\s*\.?\s*/gi,
+    // Remove duplicate company name patterns
+    /^([^.]+)\s+is\s+\1\s+/gi,
+    // Remove excessive whitespace and newlines
+    /\n\s*\n\s*\n/g,
+    /\s{3,}/g
+  ];
+  
+  let cleanedText = text;
+  
+  // Apply all sanitization patterns
+  placeholderPatterns.forEach(pattern => {
+    if (pattern.toString().includes('\\n')) {
+      cleanedText = cleanedText.replace(pattern, '\n\n');
+    } else {
+      cleanedText = cleanedText.replace(pattern, ' ');
+    }
+  });
+  
+  // Clean up extra whitespace and normalize
+  cleanedText = cleanedText
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Replace multiple newlines with double newline
+    .trim();
+  
+  return cleanedText;
+};
 
 export default function ContactUpdate() {
   const { user } = useAuth();
@@ -39,7 +81,7 @@ export default function ContactUpdate() {
         contactPhone: data.contactPhone || '',
         address: data.address || '',
         registrationNumber: data.registrationNumber || '',
-        experience: data.experience || ''
+        experience: sanitizeExperienceText(data.experience) || '' // Sanitize on load
       });
     } catch (error) {
       // Company profile might not exist yet, use defaults
@@ -57,9 +99,16 @@ export default function ContactUpdate() {
     e.preventDefault();
     try {
       setSaving(true);
+      
+      // Sanitize experience text before sending
+      const sanitizedFormData = {
+        ...formData,
+        experience: sanitizeExperienceText(formData.experience)
+      };
+      
       await api('/api/company', {
         method: 'PUT',
-        body: formData
+        body: sanitizedFormData
       });
       addToast('Contact information updated successfully!', 'success');
     } catch (error) {
@@ -71,7 +120,10 @@ export default function ContactUpdate() {
 
   // Handle input field changes
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Sanitize experience field in real-time
+    const sanitizedValue = field === 'experience' ? sanitizeExperienceText(value) : value;
+    
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
   };
 
   // Show loading skeleton while data is being fetched
@@ -207,6 +259,9 @@ export default function ContactUpdate() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
               placeholder="Describe your company's experience, key projects, capabilities, and expertise..."
             />
+            <p className="mt-1 text-sm text-gray-500">
+              This information will be used for Quick Insert in proposals
+            </p>
           </div>
         </div>
 

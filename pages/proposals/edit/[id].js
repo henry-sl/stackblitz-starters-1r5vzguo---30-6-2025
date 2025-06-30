@@ -1,7 +1,3 @@
-// pages/proposals/edit/[id].js
-// Enhanced proposal editor page with AI improvement insights
-// Removed translation of AI insights - they now come in the correct language
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -21,6 +17,48 @@ import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize, Languages, Lightbulb, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
+
+// Helper function to sanitize company experience text
+const sanitizeExperienceText = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  
+  // Remove common placeholder text patterns
+  const placeholderPatterns = [
+    /You can enter this information into the fields\s*\.?\s*/gi,
+    /\*\*Company Background:\*\*\s*/gi,
+    /\*\*Certifications:\*\*\s*/gi,
+    /\*\*Company Experience:\*\*\s*/gi,
+    /\*\*Experience:\*\*\s*/gi,
+    /Please complete your profile first\s*\.?\s*/gi,
+    /Enter your company information here\s*\.?\s*/gi,
+    /Add your company details\s*\.?\s*/gi,
+    /Complete your company profile\s*\.?\s*/gi,
+    // Remove duplicate company name patterns
+    /^([^.]+)\s+is\s+\1\s+/gi,
+    // Remove excessive whitespace and newlines
+    /\n\s*\n\s*\n/g,
+    /\s{3,}/g
+  ];
+  
+  let cleanedText = text;
+  
+  // Apply all sanitization patterns
+  placeholderPatterns.forEach(pattern => {
+    if (pattern.toString().includes('\\n')) {
+      cleanedText = cleanedText.replace(pattern, '\n\n');
+    } else {
+      cleanedText = cleanedText.replace(pattern, ' ');
+    }
+  });
+  
+  // Clean up extra whitespace and normalize
+  cleanedText = cleanedText
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Replace multiple newlines with double newline
+    .trim();
+  
+  return cleanedText;
+};
 
 export default function ProposalEditorPage() {
   const router = useRouter();
@@ -294,19 +332,23 @@ export default function ProposalEditorPage() {
     }
   };
 
-  // Insert company information using database data
+  // Insert company information using database data with sanitization
   const insertCompanyInfo = (section) => {
     if (!companyProfile) {
       addToast('Company profile not loaded. Please complete your profile first.', 'error');
       return;
     }
 
+    // Sanitize the experience text before using it
+    const cleanExperience = sanitizeExperienceText(companyProfile.experience);
+    const companyName = companyProfile.name || 'Our Company';
+
     const companyInfo = {
-      background: `\n\n**Company Background:**\n${companyProfile.name} is ${companyProfile.experience || 'a professional company with extensive experience in our field'}.\n\n`,
+      background: `\n\n**Company Background:**\n${companyName} is ${cleanExperience || 'a professional company with extensive experience in our field'}.\n\n`,
       certifications: `\n\n**Certifications:**\n${companyProfile.certifications && companyProfile.certifications.length > 0 
         ? companyProfile.certifications.map(cert => `- ${cert}`).join('\n') 
         : '- Professional certifications available upon request'}\n\n`,
-      experience: `\n\n**Company Experience:**\n${companyProfile.experience || 'Our company brings extensive experience and proven capabilities to this project.'}\n\n`
+      experience: `\n\n**Company Experience:**\n${cleanExperience || 'Our company brings extensive experience and proven capabilities to this project.'}\n\n`
     };
 
     const insertion = companyInfo[section] || "";
