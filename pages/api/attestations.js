@@ -47,26 +47,21 @@ export default async function handler(req, res) {
       // Verify transaction on blockchain for both confirmed and pending statuses
       let verificationStatus = attestation.status;
       let explorerUrl = '';
-
+      
       try {
-        if (attestation.tx_id && (attestation.status === 'confirmed' || attestation.status === 'pending')) {
-          console.log(`[Attestations API] Verifying blockchain transaction for TxID: ${attestation.tx_id}`);
+        if (attestation.status === 'confirmed' || attestation.status === 'pending') {
+          // Try to verify the transaction on the blockchain
           const isVerified = await verifyAttestationTransaction(attestation.tx_id);
           verificationStatus = isVerified ? 'verified' : 'pending';
-          console.log(`[Attestations API] TxID ${attestation.tx_id} verification result: ${verificationStatus}`);
-        } else if (!attestation.tx_id) {
-          verificationStatus = 'no_txid';
-          console.log(`[Attestations API] Attestation ${attestation.id} has no TxID.`);
         }
-
+        
         // Get explorer URL for the transaction
         explorerUrl = getExplorerURL(attestation.tx_id);
       } catch (error) {
-        console.error(`[Attestations API] Error during verification or explorer URL generation for TxID ${attestation.tx_id}:`, error);
-        // If verification fails due to an error, keep status as pending or original
-        verificationStatus = 'pending_error'; // Custom status for errors during verification
+        console.error('Error verifying attestation:', error);
+        // Don't change verification status if verification fails
       }
-
+      
       return {
         id: attestation.id,
         tenderTitle: attestation.tender_title,
@@ -82,7 +77,7 @@ export default async function handler(req, res) {
 
     res.status(200).json(transformedAttestations);
   } catch (error) {
-    console.error('[Attestations API] Error fetching attestations:', error);
+    console.error('Error fetching attestations:', error);
     res.status(500).json({ error: 'Failed to fetch attestations' });
   }
 }

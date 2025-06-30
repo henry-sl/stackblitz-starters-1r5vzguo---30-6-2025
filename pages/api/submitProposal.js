@@ -60,7 +60,6 @@ export default async function handler(req, res) {
     let txError = null;
 
     try {
-      console.log(`[Submit Proposal API] Attempting to create Algorand attestation for proposal: ${proposalId}`);
       // Create blockchain attestation using Algorand
       const attestationData = {
         proposalId: proposalId,
@@ -71,16 +70,14 @@ export default async function handler(req, res) {
       // Submit transaction to Algorand blockchain
       const txResult = await createAttestationTransaction(attestationData);
       txId = txResult.txId;
-      console.log(`[Submit Proposal API] Algorand transaction submitted. TxID: ${txId}`);
     } catch (algorandError) {
-      console.error('[Submit Proposal API] Algorand transaction error:', algorandError);
+      console.error('Algorand transaction error:', algorandError);
       txError = algorandError.message;
-
+      
       // Generate a mock blockchain transaction ID as fallback
-      txId = 'ALGO_FALLBACK_' + Math.random().toString(36).substring(2, 15).toUpperCase();
-      console.warn(`[Submit Proposal API] Falling back to mock TxID: ${txId} due to Algorand error.`);
+      txId = 'ALGO' + Math.random().toString(36).substring(2, 15).toUpperCase();
     }
-
+    
     // Update proposal status to submitted and record blockchain transaction
     const updatedProposal = await proposalOperations.update(
       supabase, 
@@ -92,7 +89,6 @@ export default async function handler(req, res) {
         blockchain_tx_id: txId
       }
     );
-    console.log(`[Submit Proposal API] Proposal ${proposalId} status updated in DB.`);
 
     // Create attestation record
     await attestationOperations.create(supabase, user.id, {
@@ -100,16 +96,15 @@ export default async function handler(req, res) {
       tender_title: proposal.tenders?.title || proposal.title,
       agency: proposal.tenders?.agency || 'Unknown Agency',
       tx_id: txId,
-      status: txError ? 'pending' : 'confirmed', // Set status based on whether a blockchain error occurred
+      status: txError ? 'pending' : 'confirmed',
       metadata: {
         proposal_id: proposalId,
         tender_id: proposal.tender_id,
         submission_timestamp: new Date().toISOString(),
-        blockchain_error: txError // Store the blockchain error message in metadata
+        blockchain_error: txError
       }
     });
-    console.log(`[Submit Proposal API] Attestation record created in DB for TxID: ${txId}`);
-
+    
     // Return success response with transaction ID and status
     res.status(200).json({ 
       txId: txId,
@@ -118,7 +113,7 @@ export default async function handler(req, res) {
       blockchainError: txError
     });
   } catch (error) {
-    console.error('[Submit Proposal API] Error submitting proposal:', error);
+    console.error('Error submitting proposal:', error);
     res.status(500).json({ error: 'Failed to submit proposal' });
   }
 }
