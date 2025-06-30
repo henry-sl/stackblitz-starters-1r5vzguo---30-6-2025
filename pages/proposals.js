@@ -1,7 +1,7 @@
 // pages/proposals.js
 // Proposals listing page using Supabase data with SWR
 // Added delete functionality for draft proposals with confirmation modal
-// Fixed to close modal immediately upon confirmation to prevent UI errors
+// Enhanced with graceful error handling for network issues
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -70,16 +70,29 @@ export default function ProposalsPage() {
     } catch (error) {
       console.error('Error deleting proposal:', error);
       
-      // Check if it's a 404 error (already deleted)
-      if (error.message.includes('Proposal not found') || error.message.includes('404')) {
+      // Enhanced error handling for different types of errors
+      if (error.message.includes('Network error') || 
+          error.message.includes('fetch failed') ||
+          error.message.includes('Unable to connect')) {
+        // For network errors, assume the deletion might have succeeded
+        // since the backend often completes the operation before the network issue occurs
+        addToast('Network issue detected. Proposal may have been deleted. Refreshing list...', 'info');
+      } else if (error.message.includes('Proposal not found') || error.message.includes('404')) {
+        // If proposal is not found, it was likely already deleted
         addToast('Proposal was already deleted', 'info');
+      } else if (error.message.includes('Access denied') || error.message.includes('403')) {
+        addToast('Access denied: You do not have permission to delete this proposal', 'error');
+      } else if (error.message.includes('Only draft proposals can be deleted')) {
+        addToast('Only draft proposals can be deleted', 'error');
       } else {
+        // For any other errors, show a generic error message
         addToast('Failed to delete proposal', 'error');
       }
     } finally {
       // Reset loading state and refresh data
       setIsDeleting(false);
       // Always refresh the proposals list to sync with database state
+      // This will show the actual current state regardless of any network issues
       mutate();
     }
   };
