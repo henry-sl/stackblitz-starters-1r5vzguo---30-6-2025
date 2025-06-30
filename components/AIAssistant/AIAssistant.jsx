@@ -140,7 +140,7 @@ export default function AIAssistant({ tenderId }) {
           </TabsList>
 
           {/* Suggestions Tab Content */}
-          <TabsContent value="suggestions" className="px-6 pt-6 pb-4 space-y-4">
+          <TabsContent value="suggestions" className="px-6 pt-6 pb-4 space-y-4 h-auto">
             <h4 className="text-sm font-medium text-gray-900 mb-3">AI Recommendations</h4>
             <div className="space-y-3">
               {/* Key Strengths to Highlight */}
