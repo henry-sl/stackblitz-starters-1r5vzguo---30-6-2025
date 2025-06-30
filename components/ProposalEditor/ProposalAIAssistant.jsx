@@ -13,7 +13,11 @@ import {
   Sparkles,
   MessageSquare,
   Lightbulb,
-  RefreshCw
+  RefreshCw,
+  CheckCircle,
+  FileText,
+  Eye,
+  Target
 } from 'lucide-react';
 
 export default function ProposalAIAssistant({ 
@@ -167,28 +171,28 @@ export default function ProposalAIAssistant({
     // Shift+Enter will naturally create a new line in textarea
   };
 
-  // Quick action buttons with auto-switch to chat tab
-  const handleKeyStrengthsAnalysis = () => {
-    setChatInput('What are the key strengths my company should highlight for this tender?');
-    setActiveTab('chat'); // Switch to chat tab
+  // Proposal editing specific quick actions
+  const handleRefineIntroConclusion = () => {
+    setChatInput('Please help me refine the introduction and conclusion sections of my proposal to make them more compelling and impactful');
+    setActiveTab('chat');
     setTimeout(handleSendMessage, 100);
   };
 
-  const handleCompetitiveAnalysis = () => {
-    setChatInput('Can you help me understand the competitive landscape for this tender?');
-    setActiveTab('chat'); // Switch to chat tab
+  const handleOptimizeReadability = () => {
+    setChatInput('Can you review my proposal for clarity and readability? Please suggest improvements to make it more concise and easier to understand');
+    setActiveTab('chat');
     setTimeout(handleSendMessage, 100);
   };
 
-  const handleRequirementsAnalysis = () => {
-    setChatInput('Please analyze the tender requirements and tell me what I need to focus on');
-    setActiveTab('chat'); // Switch to chat tab
+  const handleCheckConsistency = () => {
+    setChatInput('Please check my proposal for consistency in terminology, tone, and formatting. Highlight any inconsistencies that need to be addressed');
+    setActiveTab('chat');
     setTimeout(handleSendMessage, 100);
   };
 
-  const handleProposalStrategy = () => {
-    setChatInput('What strategy should I use when writing my proposal for this tender?');
-    setActiveTab('chat'); // Switch to chat tab
+  const handleAddCallToAction = () => {
+    setChatInput('Help me add a strong call to action to my proposal that encourages the client to choose our company and clearly outlines the next steps');
+    setActiveTab('chat');
     setTimeout(handleSendMessage, 100);
   };
 
@@ -305,93 +309,93 @@ export default function ProposalAIAssistant({
 
         {/* Tab Content */}
         {activeTab === 'suggestions' ? (
-          /* Suggestions Content */
+          /* Suggestions Content - Updated for Proposal Editing */
           <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">AI Recommendations</h4>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Proposal Enhancement Suggestions</h4>
             <div className="space-y-3">
-              {/* Key Strengths to Highlight */}
-              <Card className="p-4 border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer" onClick={handleKeyStrengthsAnalysis}>
+              {/* Refine Introduction & Conclusion */}
+              <Card className="p-4 border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer" onClick={handleRefineIntroConclusion}>
                 <div className="flex items-start space-x-3">
                   <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Lightbulb className="w-4 h-4 text-blue-600" />
+                    <FileText className="w-4 h-4 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">Key Strengths to Highlight</h5>
+                    <h5 className="font-medium text-gray-900">Refine Introduction & Conclusion</h5>
                     <p className="text-sm text-gray-600 mt-1">
-                      Get AI analysis of what strengths to emphasize
+                      Enhance opening and closing sections for maximum impact
                     </p>
                     <Button 
                       variant="link" 
                       size="sm" 
                       className="p-0 mt-2 text-blue-600 hover:text-blue-700"
                     >
-                      Analyze →
+                      Refine →
                     </Button>
                   </div>
                 </div>
               </Card>
 
-              {/* Competitive Analysis */}
-              <Card className="p-4 border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer" onClick={handleCompetitiveAnalysis}>
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">Competitive Analysis</h5>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Understand market positioning and strategies
-                    </p>
-                    <Button 
-                      variant="link" 
-                      size="sm" 
-                      className="p-0 mt-2 text-purple-600 hover:text-purple-700"
-                    >
-                      Analyze →
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Requirements Analysis */}
-              <Card className="p-4 border border-gray-200 hover:border-green-300 transition-colors cursor-pointer" onClick={handleRequirementsAnalysis}>
+              {/* Optimize for Readability */}
+              <Card className="p-4 border border-gray-200 hover:border-green-300 transition-colors cursor-pointer" onClick={handleOptimizeReadability}>
                 <div className="flex items-start space-x-3">
                   <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="w-4 h-4 text-green-600" />
+                    <Eye className="w-4 h-4 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">Requirements Analysis</h5>
+                    <h5 className="font-medium text-gray-900">Optimize for Readability</h5>
                     <p className="text-sm text-gray-600 mt-1">
-                      Break down tender requirements and priorities
+                      Improve clarity, conciseness, and flow of content
                     </p>
                     <Button 
                       variant="link" 
                       size="sm" 
                       className="p-0 mt-2 text-green-600 hover:text-green-700"
                     >
-                      Analyze →
+                      Optimize →
                     </Button>
                   </div>
                 </div>
               </Card>
 
-              {/* Proposal Strategy */}
-              <Card className="p-4 border border-gray-200 hover:border-orange-300 transition-colors cursor-pointer" onClick={handleProposalStrategy}>
+              {/* Check for Consistency */}
+              <Card className="p-4 border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer" onClick={handleCheckConsistency}>
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Lightbulb className="w-4 h-4 text-orange-600" />
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-4 h-4 text-purple-600" />
                   </div>
                   <div className="flex-1">
-                    <h5 className="font-medium text-gray-900">Proposal Strategy</h5>
+                    <h5 className="font-medium text-gray-900">Check for Consistency</h5>
                     <p className="text-sm text-gray-600 mt-1">
-                      Get strategic advice for your proposal approach
+                      Review terminology, tone, and formatting consistency
+                    </p>
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      className="p-0 mt-2 text-purple-600 hover:text-purple-700"
+                    >
+                      Check →
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Add Strong Call to Action */}
+              <Card className="p-4 border border-gray-200 hover:border-orange-300 transition-colors cursor-pointer" onClick={handleAddCallToAction}>
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Target className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="font-medium text-gray-900">Add Strong Call to Action</h5>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Create compelling next steps and decision drivers
                     </p>
                     <Button 
                       variant="link" 
                       size="sm" 
                       className="p-0 mt-2 text-orange-600 hover:text-orange-700"
                     >
-                      Get Strategy →
+                      Enhance →
                     </Button>
                   </div>
                 </div>
