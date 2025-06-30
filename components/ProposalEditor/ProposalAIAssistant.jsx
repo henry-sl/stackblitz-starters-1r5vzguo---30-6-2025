@@ -227,16 +227,7 @@ export default function ProposalAIAssistant({
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-4 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Bot className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-lg font-semibold">AI Assistant</CardTitle>
-              <p className="text-sm text-gray-600">Proposal writing help</p>
-            </div>
-          </div>
+        <div className="flex items-center justify-center">
           <Button
             onClick={handleImproveProposal}
             disabled={isImprovingProposal || !currentProposalContent.trim()}
