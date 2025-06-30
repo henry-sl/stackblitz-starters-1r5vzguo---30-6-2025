@@ -210,7 +210,7 @@ export default function AIAssistant({ tenderId }) {
               </Card>
 
               {/* Proposal Strategy */}
-              <Card className="p-4 border border-gray-200 hover:border-orange-300 transition-colors cursor-pointer h-auto" onClick={handleProposalStrategy}>
+              <Card className="p-4 border border-gray-200 hover:border-orange-300 transition-colors cursor-pointer" onClick={handleProposalStrategy}>
                 <div className="flex items-start space-x-3">
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Lightbulb className="w-4 h-4 text-orange-600" />
