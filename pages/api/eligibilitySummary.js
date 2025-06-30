@@ -116,18 +116,28 @@ function calculateEligibilityScore(tender, profile) {
     
     // Extract required grade (G1-G7)
     const gradeMatch = cidbRequirement.match(/G[1-7]/i);
-    if (gradeMatch && profile.cidb_grade) {
+    if (gradeMatch && profile.cidb_grade && typeof profile.cidb_grade === 'string') {
       const requiredGrade = parseInt(gradeMatch[0].substring(1));
-      const companyGrade = parseInt(profile.cidb_grade.substring(1));
+      const companyGradeStr = profile.cidb_grade.toString().toUpperCase();
       
-      if (companyGrade >= requiredGrade) {
-        totalPoints += 30;
-        matchedCriteria.push(`CIDB Grade: ${profile.cidb_grade} meets or exceeds required ${gradeMatch[0]}`);
+      // Safely extract grade number from company grade
+      const companyGradeMatch = companyGradeStr.match(/G?([1-7])/);
+      if (companyGradeMatch) {
+        const companyGrade = parseInt(companyGradeMatch[1]);
+        
+        if (!isNaN(companyGrade) && !isNaN(requiredGrade) && companyGrade >= requiredGrade) {
+          totalPoints += 30;
+          matchedCriteria.push(`CIDB Grade: ${profile.cidb_grade} meets or exceeds required ${gradeMatch[0]}`);
+        } else {
+          missingCriteria.push(`CIDB Grade: ${profile.cidb_grade} is below required ${gradeMatch[0]}`);
+        }
       } else {
-        missingCriteria.push(`CIDB Grade: ${profile.cidb_grade} is below required ${gradeMatch[0]}`);
+        missingCriteria.push(`CIDB Grade: Invalid format in profile (${profile.cidb_grade})`);
       }
     } else if (!profile.cidb_grade) {
       missingCriteria.push('CIDB Grade: Not provided in your profile');
+    } else {
+      missingCriteria.push('CIDB Grade: Invalid format in your profile');
     }
   }
   
@@ -142,17 +152,19 @@ function calculateEligibilityScore(tender, profile) {
     
     // Extract required years
     const yearsMatch = experienceRequirement.match(/(\d+)(?:\+)?\s*years?/i);
-    if (yearsMatch && profile.years_in_operation) {
+    if (yearsMatch && profile.years_in_operation != null) {
       const requiredYears = parseInt(yearsMatch[1]);
       const companyYears = parseInt(profile.years_in_operation);
       
-      if (companyYears >= requiredYears) {
+      if (!isNaN(companyYears) && !isNaN(requiredYears) && companyYears >= requiredYears) {
         totalPoints += 20;
         matchedCriteria.push(`Experience: ${companyYears} years meets or exceeds required ${requiredYears} years`);
-      } else {
+      } else if (!isNaN(companyYears) && !isNaN(requiredYears)) {
         missingCriteria.push(`Experience: ${companyYears} years is below required ${requiredYears} years`);
+      } else {
+        missingCriteria.push('Experience: Invalid years format in your profile');
       }
-    } else if (!profile.years_in_operation) {
+    } else if (profile.years_in_operation == null) {
       missingCriteria.push('Experience: Years in operation not provided in your profile');
     }
   }
@@ -170,26 +182,28 @@ function calculateEligibilityScore(tender, profile) {
     certificationRequirements.forEach(req => {
       maxPoints += pointsPerCert;
       
-      // Check if company has matching certification
-      const customCerts = profile.custom_certifications || [];
+      // Safely check custom certifications
+      const customCerts = Array.isArray(profile.custom_certifications) ? profile.custom_certifications : [];
       const hasCertification = customCerts.some(cert => 
+        cert && cert.name && typeof cert.name === 'string' &&
         req.toLowerCase().includes(cert.name.toLowerCase())
       );
       
       // Check for ISO standards specifically
-      if (req.toLowerCase().includes('iso 9001') && profile.iso9001) {
+      if (req.toLowerCase().includes('iso 9001') && profile.iso9001 === true) {
         totalPoints += pointsPerCert;
         matchedCriteria.push('ISO 9001: Quality Management certification');
-      } else if (req.toLowerCase().includes('iso 14001') && profile.iso14001) {
+      } else if (req.toLowerCase().includes('iso 14001') && profile.iso14001 === true) {
         totalPoints += pointsPerCert;
         matchedCriteria.push('ISO 14001: Environmental Management certification');
       } else if ((req.toLowerCase().includes('iso 45001') || req.toLowerCase().includes('ohsas 18001')) && 
-                profile.ohsas18001) {
+                profile.ohsas18001 === true) {
         totalPoints += pointsPerCert;
         matchedCriteria.push('ISO 45001/OHSAS 18001: Occupational Health & Safety certification');
       } else if (hasCertification) {
         totalPoints += pointsPerCert;
         const matchingCert = customCerts.find(cert => 
+          cert && cert.name && typeof cert.name === 'string' &&
           req.toLowerCase().includes(cert.name.toLowerCase())
         );
         matchedCriteria.push(`${matchingCert.name} certification`);
@@ -210,16 +224,21 @@ function calculateEligibilityScore(tender, profile) {
   if (licenseRequirement) {
     maxPoints += 20;
     
-    if (profile.contractor_license) {
+    if (profile.contractor_license && typeof profile.contractor_license === 'string' && profile.contractor_license.trim() !== '') {
       totalPoints += 20;
       matchedCriteria.push(`License: ${profile.contractor_license}`);
       
       // Check if license is expired
       if (profile.license_expiry) {
-        const expiryDate = new Date(profile.license_expiry);
-        if (expiryDate < new Date()) {
-          totalPoints -= 10; // Penalty for expired license
-          missingCriteria.push('License is expired');
+        try {
+          const expiryDate = new Date(profile.license_expiry);
+          if (!isNaN(expiryDate.getTime()) && expiryDate < new Date()) {
+            totalPoints -= 10; // Penalty for expired license
+            missingCriteria.push('License is expired');
+          }
+        } catch (error) {
+          // Invalid date format, ignore expiry check
+          console.warn('Invalid license expiry date format:', profile.license_expiry);
         }
       }
     } else {
@@ -262,7 +281,7 @@ function calculateEligibilityScore(tender, profile) {
  * @returns {Array} Array of requirement strings
  */
 function extractRequirementsFromDescription(description) {
-  if (!description) return [];
+  if (!description || typeof description !== 'string') return [];
   
   const requirements = [];
   
