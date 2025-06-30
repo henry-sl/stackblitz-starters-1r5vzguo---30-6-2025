@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../hooks/useToast';
@@ -17,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize, Languages, Lightbulb, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Sparkles, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize, Languages, Lightbulb, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
 
 // Helper function to sanitize company experience text
@@ -568,8 +567,8 @@ export default function ProposalEditorPage() {
           ? 'grid grid-cols-1 gap-0 h-full' 
           : 'grid grid-cols-1 lg:grid-cols-4 gap-8'
       }`}>
-        {/* Main Editor - Now takes full width */}
-        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-4'}>
+        {/* Main Editor - Now takes 3 columns instead of 4 */}
+        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-3'}>
           <Card className={`${
             isFullScreen 
               ? 'h-full border-0 shadow-none rounded-none' 
@@ -588,10 +587,6 @@ export default function ProposalEditorPage() {
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
                     {isGeneratingImprovement ? 'Improving...' : 'AI Improve'}
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <History className="w-4 h-4 mr-2" />
-                    Versions
                   </Button>
                   <Button 
                     variant="outline" 
@@ -701,7 +696,6 @@ export default function ProposalEditorPage() {
           )}
         </div>
 
-
         {/* Sidebar - hidden in full screen */}
         {!isFullScreen && (
           <div className="space-y-6">
@@ -788,7 +782,7 @@ export default function ProposalEditorPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <History className="w-5 h-5" />
+                  <Blocks className="w-5 h-5" />
                   <span>Version History</span>
                 </CardTitle>
               </CardHeader>
@@ -909,7 +903,6 @@ export default function ProposalEditorPage() {
             </Card>
           </div>
         )}
- 
       </div>
 
       {/* Floating AI Assistant - Only visible when not in full screen and not submitted */}
