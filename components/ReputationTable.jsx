@@ -56,20 +56,30 @@ export default function ReputationTable({ attestations }) {
                 </td>
                 {/* Status badge */}
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    On-chain
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    attestation.status === 'verified' 
+                      ? 'bg-green-100 text-green-800' 
+                      : attestation.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {attestation.status === 'verified' 
+                      ? 'Verified On-chain' 
+                      : attestation.status === 'pending'
+                      ? 'Pending Verification'
+                      : 'On-chain'}
                   </span>
                 </td>
                 {/* Blockchain transaction link */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <a
-                    href={`https://testnet.algoexplorer.io/tx/${attestation.txId}`}
+                    href={attestation.explorerUrl || `https://testnet.algoexplorer.io/tx/${attestation.txId}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center text-primary hover:text-blue-700"
                   >
                     <span className="font-mono text-xs">
-                      {attestation.txId.substring(0, 8)}...{attestation.txId.substring(-8)}
+                      {attestation.txId.substring(0, 8)}...{attestation.txId.substring(attestation.txId.length - 8)}
                     </span>
                     <ExternalLinkIcon className="h-3 w-3 ml-1" />
                   </a>

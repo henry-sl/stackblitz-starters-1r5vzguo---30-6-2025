@@ -3,6 +3,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { proposalOperations, attestationOperations } from '../../lib/database';
+import { createAttestationTransaction } from '../../lib/algorandTransactions';
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -55,8 +56,27 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Generate a mock blockchain transaction ID
-    const mockTxId = 'ALGO' + Math.random().toString(36).substring(2, 15).toUpperCase();
+    let txId;
+    let txError = null;
+
+    try {
+      // Create blockchain attestation using Algorand
+      const attestationData = {
+        proposalId: proposalId,
+        tenderTitle: proposal.tenders?.title || proposal.title,
+        userId: user.id
+      };
+
+      // Submit transaction to Algorand blockchain
+      const txResult = await createAttestationTransaction(attestationData);
+      txId = txResult.txId;
+    } catch (algorandError) {
+      console.error('Algorand transaction error:', algorandError);
+      txError = algorandError.message;
+      
+      // Generate a mock blockchain transaction ID as fallback
+      txId = 'ALGO' + Math.random().toString(36).substring(2, 15).toUpperCase();
+    }
     
     // Update proposal status to submitted and record blockchain transaction
     const updatedProposal = await proposalOperations.update(
@@ -66,7 +86,7 @@ export default async function handler(req, res) {
       { 
         status: 'submitted',
         submission_date: new Date().toISOString(),
-        blockchain_tx_id: mockTxId
+        blockchain_tx_id: txId
       }
     );
 
@@ -75,19 +95,22 @@ export default async function handler(req, res) {
       proposal_id: proposalId,
       tender_title: proposal.tenders?.title || proposal.title,
       agency: proposal.tenders?.agency || 'Unknown Agency',
-      tx_id: mockTxId,
-      status: 'confirmed',
+      tx_id: txId,
+      status: txError ? 'pending' : 'confirmed',
       metadata: {
         proposal_id: proposalId,
         tender_id: proposal.tender_id,
-        submission_timestamp: new Date().toISOString()
+        submission_timestamp: new Date().toISOString(),
+        blockchain_error: txError
       }
     });
     
-    // Return success response with transaction ID
+    // Return success response with transaction ID and status
     res.status(200).json({ 
-      txId: mockTxId,
-      status: 'submitted'
+      txId: txId,
+      status: 'submitted',
+      blockchainStatus: txError ? 'pending' : 'confirmed',
+      blockchainError: txError
     });
   } catch (error) {
     console.error('Error submitting proposal:', error);

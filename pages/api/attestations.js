@@ -1,8 +1,11 @@
 // pages/api/attestations.js
 // API endpoint for fetching blockchain attestations from Supabase database
+// Enhanced with Algorand blockchain verification
 
 import { createClient } from '@supabase/supabase-js';
 import { attestationOperations } from '../../lib/database';
+import { verifyAttestationTransaction } from '../../lib/algorandTransactions';
+import { getExplorerURL } from '../../lib/algorand';
 
 export default async function handler(req, res) {
   // Only allow GET requests
@@ -40,15 +43,36 @@ export default async function handler(req, res) {
     const attestations = await attestationOperations.getByUser(supabase, user.id);
     
     // Transform data to match frontend expectations (snake_case to camelCase)
-    const transformedAttestations = attestations.map(attestation => ({
-      id: attestation.id,
-      tenderTitle: attestation.tender_title,
-      agency: attestation.agency,
-      submittedAt: attestation.submitted_at,
-      txId: attestation.tx_id,
-      status: attestation.status,
-      metadata: attestation.metadata,
-      createdAt: attestation.created_at
+    const transformedAttestations = await Promise.all(attestations.map(async (attestation) => {
+      // Verify transaction on blockchain if status is 'confirmed'
+      let verificationStatus = attestation.status;
+      let explorerUrl = '';
+      
+      try {
+        if (attestation.status === 'confirmed') {
+          // Try to verify the transaction on the blockchain
+          const isVerified = await verifyAttestationTransaction(attestation.tx_id);
+          verificationStatus = isVerified ? 'verified' : 'pending';
+        }
+        
+        // Get explorer URL for the transaction
+        explorerUrl = getExplorerURL(attestation.tx_id);
+      } catch (error) {
+        console.error('Error verifying attestation:', error);
+        // Don't change verification status if verification fails
+      }
+      
+      return {
+        id: attestation.id,
+        tenderTitle: attestation.tender_title,
+        agency: attestation.agency,
+        submittedAt: attestation.submitted_at,
+        txId: attestation.tx_id,
+        status: verificationStatus,
+        metadata: attestation.metadata,
+        createdAt: attestation.created_at,
+        explorerUrl: explorerUrl
+      };
     }));
 
     res.status(200).json(transformedAttestations);
