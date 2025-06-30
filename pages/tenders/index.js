@@ -195,8 +195,7 @@ export default function TenderFeed() {
             <TenderCard 
               key={tender.id} 
               tender={tender} 
-              eligibilitySummary={eligibilitySummaries[tender.id]}
-            />
+              eligibilitySummary={eligibilitySummaries[tender.id]}/>
           ))}
         </div>
       ) : (
