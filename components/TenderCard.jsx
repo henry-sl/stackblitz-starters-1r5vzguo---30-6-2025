@@ -5,7 +5,7 @@
 
 import Link from 'next/link';
 import { CalendarIcon, BuildingOfficeIcon, CheckCircleIcon, XCircleIcon, ShieldIcon } from '@heroicons/react/24/outline';
-import { Badge as UIBdage } from './ui/badge';
+import { Badge } from './ui/badge';
 
 export default function TenderCard({ tender, eligibilitySummary }) {
   const { id, title, agency, closingDate, category, isNew } = tender;
@@ -27,31 +27,31 @@ export default function TenderCard({ tender, eligibilitySummary }) {
     switch (status) {
       case 'high_match':
         return (
-          <UIBdage className="bg-green-100 text-green-800 flex items-center space-x-1">
+          <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
             <CheckCircleIcon className="h-3 w-3" />
             <span>{score}% Match</span>
-          </UIBdage>
+          </Badge>
         );
       case 'medium_match':
         return (
-          <UIBdage className="bg-yellow-100 text-yellow-800 flex items-center space-x-1">
+          <Badge className="bg-yellow-100 text-yellow-800 flex items-center space-x-1">
             <ShieldIcon className="h-3 w-3" />
             <span>{score}% Match</span>
-          </UIBdage>
+          </Badge>
         );
       case 'low_match':
         return (
-          <UIBdage className="bg-orange-100 text-orange-800 flex items-center space-x-1">
+          <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
             <XCircleIcon className="h-3 w-3" />
             <span>{score}% Match</span>
-          </UIBdage>
+          </Badge>
         );
       case 'incomplete_profile':
         return (
-          <UIBdage className="bg-blue-100 text-blue-800 flex items-center space-x-1">
+          <Badge className="bg-blue-100 text-blue-800 flex items-center space-x-1">
             <ShieldIcon className="h-3 w-3" />
             <span>Complete Profile</span>
-          </UIBdage>
+          </Badge>
         );
       default:
         return null;
