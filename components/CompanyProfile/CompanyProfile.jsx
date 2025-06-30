@@ -45,9 +45,6 @@ export const CompanyProfile = () => {
     certifications: {
       cidbGrade: "",
       cidbExpiry: "",
-      iso9001: false,
-      iso14001: false,
-      ohsas18001: false,
       contractorLicense: "",
       licenseExpiry: "",
       customCertifications: []
@@ -107,9 +104,6 @@ export const CompanyProfile = () => {
         certifications: {
           cidbGrade: data.cidbGrade || "",
           cidbExpiry: data.cidbExpiry || "",
-          iso9001: data.iso9001 || false,
-          iso14001: data.iso14001 || false,
-          ohsas18001: data.ohsas18001 || false,
           contractorLicense: data.contractorLicense || "",
           licenseExpiry: data.licenseExpiry || "",
           customCertifications: data.customCertifications || []
@@ -163,9 +157,6 @@ export const CompanyProfile = () => {
         establishedYear: profile.basicInfo.establishedYear,
         cidbGrade: profile.certifications.cidbGrade,
         cidbExpiry: profile.certifications.cidbExpiry || null,
-        iso9001: profile.certifications.iso9001,
-        iso14001: profile.certifications.iso14001,
-        ohsas18001: profile.certifications.ohsas18001,
         contractorLicense: profile.certifications.contractorLicense,
         licenseExpiry: profile.certifications.licenseExpiry || null,
         customCertifications: profile.certifications.customCertifications,
@@ -209,15 +200,12 @@ export const CompanyProfile = () => {
     total += basicFields.length;
     completed += basicFields.filter(value => value && value.trim()).length;
 
-    // Certifications (7 core fields + custom)
-    total += 7;
+    // Certifications (4 core fields + custom)
+    total += 5;
     if (profile.certifications.cidbGrade) completed++;
     if (profile.certifications.cidbExpiry) completed++;
     if (profile.certifications.contractorLicense) completed++;
     if (profile.certifications.licenseExpiry) completed++;
-    if (profile.certifications.iso9001) completed++;
-    if (profile.certifications.iso14001) completed++;
-    if (profile.certifications.ohsas18001) completed++;
     if (profile.certifications.customCertifications.length > 0) completed++;
 
     // Experience (5 fields including major projects)
@@ -565,56 +553,6 @@ export const CompanyProfile = () => {
                         certifications: { ...profile.certifications, licenseExpiry: e.target.value }
                       })}
                     />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-4">
-                      Quality & Safety Certifications
-                    </label>
-                    <div className="space-y-3">
-                      <label className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={profile.certifications.iso9001}
-                          disabled={!isEditing}
-                          onChange={(e) => setProfile({
-                            ...profile,
-                            certifications: { ...profile.certifications, iso9001: e.target.checked }
-                          })}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span>ISO 9001:2015 (Quality Management)</span>
-                        {profile.certifications.iso9001 && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      </label>
-                      <label className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={profile.certifications.iso14001}
-                          disabled={!isEditing}
-                          onChange={(e) => setProfile({
-                            ...profile,
-                            certifications: { ...profile.certifications, iso14001: e.target.checked }
-                          })}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span>ISO 14001 (Environmental Management)</span>
-                        {profile.certifications.iso14001 && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      </label>
-                      <label className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={profile.certifications.ohsas18001}
-                          disabled={!isEditing}
-                          onChange={(e) => setProfile({
-                            ...profile,
-                            certifications: { ...profile.certifications, ohsas18001: e.target.checked }
-                          })}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span>OHSAS 18001 (Occupational Health & Safety)</span>
-                        {profile.certifications.ohsas18001 && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      </label>
-                    </div>
                   </div>
                 </div>
               </CardContent>
