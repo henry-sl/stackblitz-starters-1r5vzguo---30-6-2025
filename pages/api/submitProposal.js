@@ -3,8 +3,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { proposalOperations, attestationOperations } from '../../lib/database';
-const { isAlgorandAvailable, getExplorerURL } = require('../../lib/algorand');
-const { createAttestationTransaction } = require('../../lib/algorandUtils');
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -57,43 +55,8 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    let txId;
-    let txStatus = 'confirmed';
-
-    // Check if Algorand integration is available
-    if (isAlgorandAvailable() && process.env.ADMIN_WALLET_MNEMONIC) {
-      try {
-        console.log('Creating blockchain attestation for proposal:', proposalId);
-        
-        // Prepare attestation data
-        const attestationData = {
-          type: 'proposal_submission',
-          proposal_id: proposalId,
-          tender_id: proposal.tender_id,
-          user_id: user.id,
-          timestamp: new Date().toISOString(),
-          content_hash: Buffer.from(proposal.content || '').toString('base64').substring(0, 64) // Simple hash of content
-        };
-        
-        // Create and submit the attestation transaction
-        const result = await createAttestationTransaction(
-          process.env.ADMIN_WALLET_MNEMONIC,
-          attestationData
-        );
-        
-        txId = result.txId;
-        console.log('Blockchain attestation created:', txId);
-      } catch (error) {
-        console.error('Blockchain attestation failed:', error);
-        // Fall back to mock transaction if blockchain attestation fails
-        txId = 'ALGO' + Math.random().toString(36).substring(2, 15).toUpperCase();
-        txStatus = 'pending'; // Mark as pending since blockchain attestation failed
-      }
-    } else {
-      console.log('Algorand integration not available, using mock transaction');
-      // Generate a mock blockchain transaction ID
-      txId = 'ALGO' + Math.random().toString(36).substring(2, 15).toUpperCase();
-    }
+    // Generate a mock blockchain transaction ID
+    const mockTxId = 'ALGO' + Math.random().toString(36).substring(2, 15).toUpperCase();
     
     // Update proposal status to submitted and record blockchain transaction
     const updatedProposal = await proposalOperations.update(
@@ -103,7 +66,7 @@ export default async function handler(req, res) {
       { 
         status: 'submitted',
         submission_date: new Date().toISOString(),
-        blockchain_tx_id: txId
+        blockchain_tx_id: mockTxId
       }
     );
 
@@ -112,21 +75,19 @@ export default async function handler(req, res) {
       proposal_id: proposalId,
       tender_title: proposal.tenders?.title || proposal.title,
       agency: proposal.tenders?.agency || 'Unknown Agency',
-      tx_id: txId,
-      status: txStatus,
+      tx_id: mockTxId,
+      status: 'confirmed',
       metadata: {
         proposal_id: proposalId,
         tender_id: proposal.tender_id,
-        submission_timestamp: new Date().toISOString(),
-        explorer_url: getExplorerURL(txId)
+        submission_timestamp: new Date().toISOString()
       }
     });
     
     // Return success response with transaction ID
     res.status(200).json({ 
-      txId: txId,
-      status: txStatus,
-      explorerUrl: getExplorerURL(txId)
+      txId: mockTxId,
+      status: 'submitted'
     });
   } catch (error) {
     console.error('Error submitting proposal:', error);
