@@ -11,5 +11,3 @@ function generateAdminWallet() {
 }
 
 generateAdminWallet();
-console.log(`Admin Wallet Address: ${account.addr}`);
-console.log(`Admin Wallet Mnemonic: ${mnemonic}`);

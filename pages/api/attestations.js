@@ -49,14 +49,17 @@ export default async function handler(req, res) {
       let explorerUrl = '';
       
       try {
-        if (attestation.status === 'confirmed' || attestation.status === 'pending') {
+        if (attestation.tx_id && attestation.tx_id !== 'pending' && 
+            (attestation.status === 'confirmed' || attestation.status === 'pending')) {
           // Try to verify the transaction on the blockchain
           const isVerified = await verifyAttestationTransaction(attestation.tx_id);
           verificationStatus = isVerified ? 'verified' : 'pending';
         }
         
         // Get explorer URL for the transaction
-        explorerUrl = getExplorerURL(attestation.tx_id);
+        if (attestation.tx_id && attestation.tx_id !== 'pending') {
+          explorerUrl = getExplorerURL(attestation.tx_id);
+        }
       } catch (error) {
         console.error('Error verifying attestation:', error);
         // Don't change verification status if verification fails

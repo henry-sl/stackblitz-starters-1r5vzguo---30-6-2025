@@ -56,7 +56,8 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    let txId;
+    let txId = null;
+    let txStatus = 'pending';
     let txError = null;
 
     try {
@@ -70,12 +71,10 @@ export default async function handler(req, res) {
       // Submit transaction to Algorand blockchain
       const txResult = await createAttestationTransaction(attestationData);
       txId = txResult.txId;
+      txStatus = 'confirmed';
     } catch (algorandError) {
       console.error('Algorand transaction error:', algorandError);
       txError = algorandError.message;
-      
-      // Generate a mock blockchain transaction ID as fallback
-      txId = 'ALGO' + Math.random().toString(36).substring(2, 15).toUpperCase();
     }
     
     // Update proposal status to submitted and record blockchain transaction
@@ -95,8 +94,8 @@ export default async function handler(req, res) {
       proposal_id: proposalId,
       tender_title: proposal.tenders?.title || proposal.title,
       agency: proposal.tenders?.agency || 'Unknown Agency',
-      tx_id: txId,
-      status: txError ? 'pending' : 'confirmed',
+      tx_id: txId || 'pending',
+      status: txStatus,
       metadata: {
         proposal_id: proposalId,
         tender_id: proposal.tender_id,
@@ -107,9 +106,9 @@ export default async function handler(req, res) {
     
     // Return success response with transaction ID and status
     res.status(200).json({ 
-      txId: txId,
+      txId: txId || 'pending',
       status: 'submitted',
-      blockchainStatus: txError ? 'pending' : 'confirmed',
+      blockchainStatus: txStatus,
       blockchainError: txError
     });
   } catch (error) {

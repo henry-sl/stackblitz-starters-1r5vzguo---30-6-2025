@@ -4,7 +4,7 @@
 // Updated with eligibility scoring display
 
 import Link from 'next/link';
-import { CalendarIcon, BuildingOfficeIcon, CheckCircleIcon, XCircleIcon, ShieldIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, BuildingOfficeIcon, CheckCircle, XCircle, ShieldIcon } from '@heroicons/react/24/outline';
 import { Badge } from './ui/badge';
 
 export default function TenderCard({ tender, eligibilitySummary }) {
@@ -28,7 +28,7 @@ export default function TenderCard({ tender, eligibilitySummary }) {
       case 'high_match':
         return (
           <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
-            <CheckCircleIcon className="h-3 w-3" />
+            <CheckCircle className="h-3 w-3" />
             <span>{score}% Match</span>
           </Badge>
         );
@@ -42,7 +42,7 @@ export default function TenderCard({ tender, eligibilitySummary }) {
       case 'low_match':
         return (
           <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
-            <XCircleIcon className="h-3 w-3" />
+            <XCircle className="h-3 w-3" />
             <span>{score}% Match</span>
           </Badge>
         );
