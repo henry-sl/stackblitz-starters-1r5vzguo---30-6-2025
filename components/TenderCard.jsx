@@ -4,7 +4,8 @@
 // Updated with eligibility scoring display
 
 import Link from 'next/link';
-import { CalendarIcon, BuildingOfficeIcon, CheckCircle, XCircle, ShieldIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { CheckCircle, XCircle, ShieldCheck } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 export default function TenderCard({ tender, eligibilitySummary }) {
@@ -28,28 +29,28 @@ export default function TenderCard({ tender, eligibilitySummary }) {
       case 'high_match':
         return (
           <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
-            <CheckCircle className="h-3 w-3" />
+            <CheckCircle className="h-3 w-3 mr-1" />
             <span>{score}% Match</span>
           </Badge>
         );
       case 'medium_match':
         return (
           <Badge className="bg-yellow-100 text-yellow-800 flex items-center space-x-1">
-            <ShieldIcon className="h-3 w-3" />
+            <ShieldCheck className="h-3 w-3 mr-1" />
             <span>{score}% Match</span>
           </Badge>
         );
       case 'low_match':
         return (
           <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
-            <XCircle className="h-3 w-3" />
+            <XCircle className="h-3 w-3 mr-1" />
             <span>{score}% Match</span>
           </Badge>
         );
       case 'incomplete_profile':
         return (
           <Badge className="bg-blue-100 text-blue-800 flex items-center space-x-1">
-            <ShieldIcon className="h-3 w-3" />
+            <ShieldCheck className="h-3 w-3 mr-1" />
             <span>Complete Profile</span>
           </Badge>
         );

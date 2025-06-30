@@ -75,17 +75,21 @@ export default function ReputationTable({ attestations }) {
               </td>
               {/* Blockchain transaction link */}
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <a
-                  href={attestation.explorerUrl || `https://testnet.algoexplorer.io/tx/${attestation.txId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-primary hover:text-blue-700"
-                >
-                  <span className="font-mono text-xs">
-                    {attestation.txId.substring(0, 8)}...{attestation.txId.substring(attestation.txId.length - 8)}
-                  </span>
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </a>
+                {attestation.txId && attestation.txId !== 'pending' ? (
+                  <a
+                    href={attestation.explorerUrl || `https://testnet.algoexplorer.io/tx/${attestation.txId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-primary hover:text-blue-700"
+                  >
+                    <span className="font-mono text-xs">
+                      {attestation.txId.substring(0, 8)}...{attestation.txId.substring(attestation.txId.length - 8)}
+                    </span>
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </a>
+                ) : (
+                  <span className="text-gray-400">Pending</span>
+                )}
               </td>
             </tr>
           ))}

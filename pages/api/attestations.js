@@ -70,7 +70,7 @@ export default async function handler(req, res) {
         tenderTitle: attestation.tender_title,
         agency: attestation.agency,
         submittedAt: attestation.submitted_at,
-        txId: attestation.tx_id,
+        txId: attestation.tx_id || 'pending',
         status: verificationStatus,
         metadata: attestation.metadata,
         createdAt: attestation.created_at,
