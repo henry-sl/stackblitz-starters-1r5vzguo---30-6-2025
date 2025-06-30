@@ -9,7 +9,7 @@ import ToastContainer from './ToastContainer';
 
 export default function Layout({ children }) {
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   // Check if we're on the homepage to show full-width layout
   const isHomePage = router.pathname === '/';
