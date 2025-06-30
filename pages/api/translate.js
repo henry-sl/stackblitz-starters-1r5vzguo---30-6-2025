@@ -4,6 +4,8 @@
 
 import { LingoDotDevEngine } from "lingo.dev/sdk";
 
+console.log('Value of LINGODEV_API_KEY in API route:', process.env.LINGODEV_API_KEY); 
+
 // Initialize Lingo.dev engine globally to reuse across requests
 let lingoEngine;
 
