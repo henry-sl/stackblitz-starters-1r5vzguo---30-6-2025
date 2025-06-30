@@ -63,6 +63,11 @@ export default async function handler(req, res) {
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+    // Add detailed logging for environment variables
+    console.log('[Company API] Supabase URL for server:', supabaseUrl);
+    console.log('[Company API] Supabase Service Role Key (first 5 chars):', serviceRoleKey ? serviceRoleKey.substring(0, 5) + '...' : 'Not set');
+    console.log('[Company API] All environment variables:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
+
     if (!supabaseUrl) {
       console.error('[Company API] Missing SUPABASE_URL environment variable');
       return res.status(500).json({ error: 'Server configuration error: Missing Supabase URL' });
@@ -75,7 +80,7 @@ export default async function handler(req, res) {
 
     console.log('[Company API] Creating Supabase service role client');
     
-    // Create a Supabase client with service role key for server-side operations
+    // Create Supabase client with service role key for server-side operations
     const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
 
     console.log('[Company API] Verifying JWT token');
