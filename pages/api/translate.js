@@ -4,19 +4,6 @@
 
 import { LingoDotDevEngine } from "lingo.dev/sdk";
 
-console.log('Value of LINGODEV_API_KEY in API route:', process.env.LINGODEV_API_KEY); 
-
-// Initialize Lingo.dev engine globally to reuse across requests
-let lingoEngine;
-
-if (process.env.LINGODEV_API_KEY) {
-  lingoEngine = new LingoDotDevEngine({
-    apiKey: process.env.LINGODEV_API_KEY,
-  });
-} else {
-  console.error("LINGODEV_API_KEY is not set. Translation service cannot function without API key.");
-}
-
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -30,8 +17,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing text or targetLang' });
   }
 
-  // Check if API key is configured
-  if (!lingoEngine) {
+  // Check if API key is configured and initialize engine inside handler
+  if (!process.env.LINGODEV_API_KEY) {
+    console.error("LINGODEV_API_KEY is not set. Translation service cannot function without API key.");
     return res.status(500).json({ 
       error: 'Translation service unavailable',
       details: 'LINGODEV_API_KEY is not configured. Please set up your Lingo.dev API key.'
@@ -39,6 +27,11 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Initialize Lingo.dev engine inside the handler to ensure env vars are loaded
+    const lingoEngine = new LingoDotDevEngine({
+      apiKey: process.env.LINGODEV_API_KEY,
+    });
+
     // Improved source language inference logic
     // If target is Malay (ms), assume source is English (en)
     // If target is English (en), assume source is Malay (ms)
