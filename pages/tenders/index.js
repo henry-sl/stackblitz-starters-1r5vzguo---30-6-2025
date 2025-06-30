@@ -1,15 +1,17 @@
 // pages/tenders/index.js
-// Updated tenders listing page with new modern design
+// Updated tenders listing page with new modern design and eligibility scoring
 // Converted from React Router to Next.js routing
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { fetcher } from '../../lib/api';
+import { fetcher, api } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import TenderCard from '../../components/TenderCard';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Search, 
   Filter, 
@@ -17,17 +19,27 @@ import {
   MapPin, 
   Building, 
   Clock,
-  Sparkles
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function TenderFeed() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
+  const [eligibilitySummaries, setEligibilitySummaries] = useState({});
+  const [isLoadingEligibility, setIsLoadingEligibility] = useState(false);
 
   // Fetch tenders data from API
   const { data: tenders, error, isLoading } = useSWR('/api/tenders', fetcher);
+  
+  // Fetch company profile for eligibility checking
+  const { data: companyProfile } = useSWR(
+    user ? '/api/company' : null,
+    fetcher
+  );
 
   // Available categories and locations for filtering
   const categories = ['all', 'Construction', 'IT Services', 'Healthcare', 'Consulting'];
@@ -44,23 +56,32 @@ export default function TenderFeed() {
     return matchesSearch && matchesCategory && matchesLocation;
   }) || [];
 
-  const getStatusBadge = (tender) => {
-    const daysUntilClosing = Math.ceil(
-      (new Date(tender.closingDate) - new Date()) / (1000 * 60 * 60 * 24)
-    );
-    
-    if (tender.isNew) {
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">New</Badge>;
-    } else if (daysUntilClosing <= 7 && daysUntilClosing > 0) {
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Closing Soon</Badge>;
-    } else {
-      return <Badge variant="secondary">Active</Badge>;
-    }
-  };
+  // Fetch eligibility summaries when tenders and company profile are loaded
+  useEffect(() => {
+    const fetchEligibilitySummaries = async () => {
+      if (!user || !tenders || tenders.length === 0 || !companyProfile) {
+        return;
+      }
 
-  const getDaysUntilClosing = (closingDate) => {
-    return formatDistanceToNow(new Date(closingDate), { addSuffix: true });
-  };
+      try {
+        setIsLoadingEligibility(true);
+        const tenderIds = tenders.map(tender => tender.id);
+        
+        const result = await api('/api/eligibilitySummary', {
+          method: 'POST',
+          body: { tenderIds }
+        });
+        
+        setEligibilitySummaries(result);
+      } catch (error) {
+        console.error('Error fetching eligibility summaries:', error);
+      } finally {
+        setIsLoadingEligibility(false);
+      }
+    };
+
+    fetchEligibilitySummaries();
+  }, [tenders, companyProfile, user]);
 
   // Error state
   if (error) {
@@ -77,7 +98,15 @@ export default function TenderFeed() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Available Tenders</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold text-gray-900">Available Tenders</h1>
+          {user && (
+            <Badge className="bg-blue-100 text-blue-800 flex items-center space-x-1 px-3 py-1">
+              <ShieldCheck className="w-4 h-4 mr-1" />
+              <span>Eligibility Scoring Active</span>
+            </Badge>
+          )}
+        </div>
         <p className="text-gray-600">Discover and bid on government and private sector opportunities</p>
       </div>
 
@@ -163,68 +192,11 @@ export default function TenderFeed() {
         // Render tender cards when data is available
         <div className="grid gap-6 lg:grid-cols-2">
           {filteredTenders.map((tender) => (
-            <Card key={tender.id} className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                      {tender.title}
-                    </CardTitle>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                      <div className="flex items-center space-x-1">
-                        <Building className="w-4 h-4" />
-                        <span>{tender.agency}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="w-4 h-4" />
-                        <span>Malaysia</span>
-                      </div>
-                    </div>
-                  </div>
-                  {getStatusBadge(tender)}
-                </div>
-              </CardHeader>
-
-              <CardContent className="pt-0">
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {tender.description}
-                </p>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge variant="outline">{tender.category}</Badge>
-                  {tender.isNew && <Badge variant="outline">Featured</Badge>}
-                </div>
-
-                {/* Tender Details */}
-                <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Category:</span>
-                    <p className="font-semibold text-gray-900">{tender.category}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Closing:</span>
-                    <p className="font-semibold text-gray-900 flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{getDaysUntilClosing(tender.closingDate)}</span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex space-x-3">
-                  <Link href={`/tenders/${tender.id}`} className="flex-1">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                      View Details
-                    </Button>
-                  </Link>
-                  <Button variant="outline" className="flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span>AI Assist</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <TenderCard 
+              key={tender.id} 
+              tender={tender} 
+              eligibilitySummary={eligibilitySummaries[tender.id]}
+            />
           ))}
         </div>
       ) : (
@@ -247,6 +219,39 @@ export default function TenderFeed() {
           >
             Clear Filters
           </Button>
+        </div>
+      )}
+
+      {/* Eligibility Scoring Information */}
+      {user && (
+        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div className="flex items-start space-x-4">
+            <div className="bg-blue-100 p-2 rounded-full">
+              <ShieldCheck className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">About Eligibility Scoring</h3>
+              <p className="text-blue-800 mb-4">
+                Tenders are automatically scored based on your company profile and certifications. 
+                The system analyzes requirements like CIDB grade, experience, and certifications to 
+                determine your eligibility.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center space-x-2">
+                  <Badge className="bg-green-100 text-green-800">High Match</Badge>
+                  <span className="text-blue-800">80-100% match</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge className="bg-yellow-100 text-yellow-800">Medium Match</Badge>
+                  <span className="text-blue-800">50-79% match</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge className="bg-orange-100 text-orange-800">Low Match</Badge>
+                  <span className="text-blue-800">Below 50% match</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

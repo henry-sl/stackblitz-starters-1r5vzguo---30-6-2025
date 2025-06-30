@@ -1,8 +1,8 @@
 // pages/tenders/[id].js
-// Updated tender details page with translation functionality
+// Updated tender details page with translation functionality and eligibility details
 // Added Lingo.dev integration for Malay-English translation
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import TranslationButton from '../../components/Translation/TranslationButton';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   ArrowLeft, 
   Building, 
@@ -26,7 +27,9 @@ import {
   Download,
   Clock,
   AlertCircle,
-  Languages
+  Languages,
+  ShieldCheck,
+  XCircle
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 
@@ -34,9 +37,11 @@ export default function TenderDetails() {
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
+  const { user } = useAuth();
   
   const [aiSummary, setAiSummary] = useState(null);
   const [eligibilityCheck, setEligibilityCheck] = useState(null);
+  const [detailedEligibility, setDetailedEligibility] = useState(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
   const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
@@ -46,6 +51,34 @@ export default function TenderDetails() {
     id ? `/api/tenders/${id}` : null,
     fetcher
   );
+
+  // Fetch company profile for eligibility context
+  const { data: companyProfile } = useSWR(
+    user ? '/api/company' : null,
+    fetcher
+  );
+
+  // Fetch eligibility summary when tender and company profile are loaded
+  useEffect(() => {
+    const fetchEligibilitySummary = async () => {
+      if (!id || !user || !companyProfile) return;
+      
+      try {
+        const result = await api('/api/eligibilitySummary', {
+          method: 'POST',
+          body: { tenderIds: [id] }
+        });
+        
+        if (result && result[id]) {
+          setDetailedEligibility(result[id]);
+        }
+      } catch (error) {
+        console.error('Error fetching eligibility summary:', error);
+      }
+    };
+
+    fetchEligibilitySummary();
+  }, [id, user, companyProfile]);
 
   // AI functions
   const generateAISummary = async () => {
@@ -108,6 +141,46 @@ export default function TenderDetails() {
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Closing Soon</Badge>;
       default:
         return <Badge variant="secondary">Active</Badge>;
+    }
+  };
+
+  // Get eligibility badge styling
+  const getEligibilityBadge = () => {
+    if (!detailedEligibility) return null;
+    
+    const { status, score } = detailedEligibility;
+    
+    switch (status) {
+      case 'high_match':
+        return (
+          <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
+            <CheckCircle className="w-4 h-4 mr-1" />
+            <span>{score}% Match</span>
+          </Badge>
+        );
+      case 'medium_match':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 flex items-center space-x-1">
+            <ShieldCheck className="w-4 h-4 mr-1" />
+            <span>{score}% Match</span>
+          </Badge>
+        );
+      case 'low_match':
+        return (
+          <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
+            <AlertCircle className="w-4 h-4 mr-1" />
+            <span>{score}% Match</span>
+          </Badge>
+        );
+      case 'incomplete_profile':
+        return (
+          <Badge className="bg-blue-100 text-blue-800 flex items-center space-x-1">
+            <ShieldCheck className="w-4 h-4 mr-1" />
+            <span>Complete Profile</span>
+          </Badge>
+        );
+      default:
+        return null;
     }
   };
 
@@ -178,13 +251,72 @@ export default function TenderDetails() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline">{tender.category}</Badge>
                     {tender.isNew && <Badge variant="outline">Featured</Badge>}
-                    
+                    {getEligibilityBadge()}
                   </div>
                 </div>
                 {getStatusBadge(tender.isNew ? 'new' : 'active')}
               </div>
             </CardHeader>
           </Card>
+
+          {/* Eligibility Details */}
+          {detailedEligibility && user && (
+            <Card className={`border-l-4 ${
+              detailedEligibility.status === 'high_match' ? 'border-l-green-500 bg-green-50/30' :
+              detailedEligibility.status === 'medium_match' ? 'border-l-yellow-500 bg-yellow-50/30' :
+              detailedEligibility.status === 'low_match' ? 'border-l-orange-500 bg-orange-50/30' :
+              'border-l-blue-500 bg-blue-50/30'
+            }`}>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <ShieldCheck className="w-5 h-5" />
+                  <span>Eligibility Assessment</span>
+                  <span className="ml-auto text-lg font-bold">
+                    {detailedEligibility.score}%
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 mb-4">{detailedEligibility.message}</p>
+                
+                {detailedEligibility.matchedCriteria && detailedEligibility.matchedCriteria.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Matched Criteria</h4>
+                    <ul className="space-y-2">
+                      {detailedEligibility.matchedCriteria.map((criterion, index) => (
+                        <li key={index} className="flex items-start space-x-2 text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">{criterion}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {detailedEligibility.missingCriteria && detailedEligibility.missingCriteria.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Missing or Incomplete</h4>
+                    <ul className="space-y-2">
+                      {detailedEligibility.missingCriteria.map((criterion, index) => (
+                        <li key={index} className="flex items-start space-x-2 text-sm">
+                          <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">{criterion}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {detailedEligibility.status === 'incomplete_profile' && (
+                  <div className="mt-4">
+                    <Link href="/company-profile">
+                      <Button>Complete Your Profile</Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* AI Tools Panel */}
           <Card className="border-blue-200 bg-blue-50/50">
