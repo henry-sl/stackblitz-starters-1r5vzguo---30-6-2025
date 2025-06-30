@@ -22,6 +22,7 @@ export default function AIAssistant({ tenderId }) {
   const { addToast } = useToast();
   const [chatInput, setChatInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('suggestions'); // Add state for active tab
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
   
@@ -115,21 +116,25 @@ export default function AIAssistant({ tenderId }) {
   // Quick action functions for suggestions
   const handleKeyStrengthsAnalysis = () => {
     setChatInput('What are the key strengths my company should highlight for this tender?');
+    setActiveTab('chat'); // Switch to chat tab
     setTimeout(handleSendMessage, 100);
   };
 
   const handleCompetitiveAnalysis = () => {
     setChatInput('Can you help me understand the competitive landscape for this tender?');
+    setActiveTab('chat'); // Switch to chat tab
     setTimeout(handleSendMessage, 100);
   };
 
   const handleRequirementsAnalysis = () => {
     setChatInput('Please analyze the tender requirements and tell me what I need to focus on');
+    setActiveTab('chat'); // Switch to chat tab
     setTimeout(handleSendMessage, 100);
   };
 
   const handleProposalStrategy = () => {
     setChatInput('What strategy should I use when writing my proposal for this tender?');
+    setActiveTab('chat'); // Switch to chat tab
     setTimeout(handleSendMessage, 100);
   };
 
@@ -147,7 +152,7 @@ export default function AIAssistant({ tenderId }) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <Tabs defaultValue="suggestions" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 rounded-none border-b border-gray-200 bg-gray-50">
             <TabsTrigger value="suggestions" className="rounded-none">Suggestions</TabsTrigger>
             <TabsTrigger value="chat" className="rounded-none">Chat</TabsTrigger>
