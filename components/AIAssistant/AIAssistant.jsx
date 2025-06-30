@@ -234,7 +234,7 @@ export default function AIAssistant({ tenderId }) {
           </TabsContent>
 
           {/* Chat Tab Content */}
-          <TabsContent value="chat" className="flex flex-col h-96">
+          <TabsContent value="chat" className="flex flex-col">
             {/* Chat Messages - Scrollable */}
             <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 border border-gray-200 rounded-lg mx-6 mt-4 bg-gray-50">
               {chatMessages.map((message) => (
