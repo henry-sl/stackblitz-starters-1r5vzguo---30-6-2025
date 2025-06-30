@@ -53,7 +53,7 @@ export default function Signup() {
               },
             }}
             providers={[]} // No social login providers
-            redirectTo={`${window.location.origin}/tenders`} // Redirect after successful signup
+            redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/tenders` : '/tenders'} // Safe redirect handling
           />
         </div>
       </div>

@@ -52,7 +52,7 @@ export default function Login() {
               },
             }}
             providers={[]} // No social login providers
-            redirectTo={`${window.location.origin}/tenders`} // Redirect after successful login
+            redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/tenders` : '/tenders'} // Safe redirect handling
           />
         </div>
       </div>
