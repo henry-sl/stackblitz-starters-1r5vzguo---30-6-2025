@@ -23,6 +23,7 @@ export default function AIAssistant({ tenderId }) {
   const [chatInput, setChatInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef(null);
+  const textareaRef = useRef(null);
   
   const [chatMessages, setChatMessages] = useState([
     {
@@ -37,6 +38,18 @@ export default function AIAssistant({ tenderId }) {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set height based on scrollHeight, with min and max constraints
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, 44), 120); // Min 44px (roughly 1 line), Max 120px (roughly 3 lines)
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, [chatInput]);
 
   // Handle sending a chat message
   const handleSendMessage = async () => {
@@ -90,12 +103,13 @@ export default function AIAssistant({ tenderId }) {
     }
   };
 
-  // Handle key press in input
+  // Handle key press in textarea
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
+    // Shift+Enter will naturally create a new line in textarea
   };
 
   // Quick action functions for suggestions
@@ -236,7 +250,7 @@ export default function AIAssistant({ tenderId }) {
           {/* Chat Tab Content */}
           <TabsContent value="chat" className="flex flex-col">
             {/* Chat Messages - Scrollable */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 border border-gray-200 rounded-lg mx-6 mt-4 bg-gray-50">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 border border-gray-200 rounded-lg mx-6 mt-4 bg-gray-50 max-h-80">
               {chatMessages.map((message) => (
                 <div
                   key={message.id}
@@ -297,15 +311,20 @@ export default function AIAssistant({ tenderId }) {
 
             {/* Chat Input */}
             <div className="flex-shrink-0 p-6 pt-4">
-              <div className="flex items-center space-x-3">
-                <Input
-                  placeholder="Ask about this tender..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={isLoading}
-                  className="flex-1"
-                />
+              <div className="flex items-end space-x-3">
+                <div className="flex-1">
+                  <textarea
+                    ref={textareaRef}
+                    placeholder="Ask about this tender..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isLoading}
+                    rows={1}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none overflow-hidden leading-5"
+                    style={{ minHeight: '44px' }}
+                  />
+                </div>
                 <Button 
                   onClick={handleSendMessage} 
                   disabled={!chatInput.trim() || isLoading}
