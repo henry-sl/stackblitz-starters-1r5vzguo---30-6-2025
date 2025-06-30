@@ -211,16 +211,16 @@ export default async function handler(req, res) {
 
     // Mock AI improvement (preserves input language)
     if (!process.env.OPENAI_API_KEY) {
-  let improvedContent;
-  let insights;
+      let improvedContent;
+      let insights;
 
-  if (detectedLanguage === 'ms') {
-    // Input is in Malay, improve in Malay
-    improvedContent = proposalContent
-      .replace(/\*\*Latar Belakang Syarikat:\*\*/g, '**Latar Belakang Syarikat:**')
-      .replace(/\*\*Sijil:\*\*/g, '**Pensijilan dan Kelayakan:**')
-      .replace(/\*\*Pengalaman Syarikat:\*\*/g, '**Pengalaman dan Kepakaran Syarikat:**')
-      + `
+      if (detectedLanguage === 'ms') {
+        // Input is in Malay, improve in Malay
+        improvedContent = proposalContent
+          .replace(/\*\*Latar Belakang Syarikat:\*\*/g, '**Latar Belakang Syarikat:**')
+          .replace(/\*\*Sijil:\*\*/g, '**Pensijilan dan Kelayakan:**')
+          .replace(/\*\*Pengalaman Syarikat:\*\*/g, '**Pengalaman dan Kepakaran Syarikat:**')
+          + `
 
 ## Pendekatan Teknikal
 
@@ -238,27 +238,27 @@ Kami berharap dapat peluang untuk membincangkan cadangan kami secara terperinci 
 Yang benar,
 Pasukan ${profile?.name || 'Syarikat Kami'}`;
 
-    insights = [
-      {
-        change: "Diperkukuhkan bahagian latar belakang syarikat",
-        explanation: "Bahagian latar belakang syarikat telah diperkukuhkan dengan maklumat yang lebih terperinci tentang pengalaman dan keupayaan syarikat. Ini memberikan keyakinan kepada panel penilai tentang kredibiliti dan kesesuaian syarikat untuk projek ini."
-      },
-      {
-        change: "Ditambah bahagian pendekatan teknikal",
-        explanation: "Bahagian pendekatan teknikal yang baru ditambah menunjukkan metodologi yang jelas dan terstruktur. Ini membantu panel penilai memahami bagaimana syarikat akan melaksanakan projek dengan jayanya."
-      },
-      {
-        change: "Diperbaiki struktur dan format dokumen",
-        explanation: "Struktur dokumen telah diperbaiki dengan penggunaan tajuk yang lebih jelas dan format yang konsisten. Ini meningkatkan kebolehbacaan dan profesionalisme cadangan."
-      }
-    ];
-  } else {
-    // Input is in English, improve in English
-    improvedContent = proposalContent
-      .replace(/\*\*Company Background:\*\*/g, '**Company Background and Expertise:**')
-      .replace(/\*\*Certifications:\*\*/g, '**Certifications and Qualifications:**')
-      .replace(/\*\*Company Experience:\*\*/g, '**Company Experience and Capabilities:**')
-      + `
+        insights = [
+          {
+            change: "Diperkukuhkan bahagian latar belakang syarikat",
+            explanation: "Bahagian latar belakang syarikat telah diperkukuhkan dengan maklumat yang lebih terperinci tentang pengalaman dan keupayaan syarikat. Ini memberikan keyakinan kepada panel penilai tentang kredibiliti dan kesesuaian syarikat untuk projek ini."
+          },
+          {
+            change: "Ditambah bahagian pendekatan teknikal",
+            explanation: "Bahagian pendekatan teknikal yang baru ditambah menunjukkan metodologi yang jelas dan terstruktur. Ini membantu panel penilai memahami bagaimana syarikat akan melaksanakan projek dengan jayanya."
+          },
+          {
+            change: "Diperbaiki struktur dan format dokumen",
+            explanation: "Struktur dokumen telah diperbaiki dengan penggunaan tajuk yang lebih jelas dan format yang konsisten. Ini meningkatkan kebolehbacaan dan profesionalisme cadangan."
+          }
+        ];
+      } else {
+        // Input is in English, improve in English
+        improvedContent = proposalContent
+          .replace(/\*\*Company Background:\*\*/g, '**Company Background and Expertise:**')
+          .replace(/\*\*Certifications:\*\*/g, '**Certifications and Qualifications:**')
+          .replace(/\*\*Company Experience:\*\*/g, '**Company Experience and Capabilities:**')
+          + `
 
 ## Technical Approach
 
@@ -284,45 +284,30 @@ We look forward to the opportunity to discuss our proposal in detail and demonst
 Sincerely,
 ${profile?.name || 'Our Company'} Team`;
 
-    insights = [
-      {
-        change: "Enhanced company background section",
-        explanation: "The company background section has been enhanced to highlight experience and expertise in relevant industries. This reassures evaluators of the company's capability."
-      },
-      {
-        change: "Added technical approach section",
-        explanation: "A new technical approach section outlines the company's methodology and strategies to deliver the project successfully, demonstrating thorough planning and professionalism."
-      },
-      {
-        change: "Improved document structure and formatting",
-        explanation: "Headings and formatting have been refined for better readability and presentation quality."
-      }
-    ];
-  }
-
-  return res.status(200).json({
-    improvedContent,
-    insights,
-    detectedLanguage,
-    tender: {
-      title: tender.title,
-      agency: tender.agency,
-    }
-  });
-}
-
+        insights = [
+          {
+            change: "Enhanced company background section",
+            explanation: "The company background section has been enhanced to highlight experience and expertise in relevant industries. This reassures evaluators of the company's capability."
+          },
+          {
+            change: "Added technical approach section",
+            explanation: "A new technical approach section outlines the company's methodology and strategies to deliver the project successfully, demonstrating thorough planning and professionalism."
+          },
+          {
+            change: "Improved document structure and formatting",
+            explanation: "Headings and formatting have been refined for better readability and presentation quality."
+          }
+        ];
       }
 
-      return res.status(200).json({ 
+      return res.status(200).json({
         improvedContent,
-
-        improvements: [
-          'Incorporated user feedback and instructions',
-          'Enhanced content based on specific requirements',
-          'Maintained professional tone and structure',
-          'Aligned with tender requirements'
-        ],
-        insights
+        insights,
+        detectedLanguage,
+        tender: {
+          title: tender.title,
+          agency: tender.agency,
+        }
       });
     }
 
@@ -375,63 +360,63 @@ ${profile?.name || 'Our Company'} Team`;
         console.warn('AI response validation failed:', validation.issues);
       }
       
-try {
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('No JSON found in AI response');
-  }
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('No JSON found in AI response');
+        }
 
-  let jsonString = jsonMatch[0];
-  
-  let parsedResult;
-  try {
-    parsedResult = JSON.parse(jsonString);
-  } catch (firstParseError) {
-    console.warn('First JSON parse failed, attempting to sanitize:', firstParseError.message);
-    jsonString = jsonString.replace(
-      /"improvedContent":\s*"([^"]*(?:\\.[^"]*)*)"/, 
-      (match, content) => {
-        const sanitizedContent = sanitizeJsonString(content);
-        return `"improvedContent": "${sanitizedContent}"`;
+        let jsonString = jsonMatch[0];
+        
+        let parsedResult;
+        try {
+          parsedResult = JSON.parse(jsonString);
+        } catch (firstParseError) {
+          console.warn('First JSON parse failed, attempting to sanitize:', firstParseError.message);
+          jsonString = jsonString.replace(
+            /"improvedContent":\s*"([^"]*(?:\\.[^"]*)*)"/, 
+            (match, content) => {
+              const sanitizedContent = sanitizeJsonString(content);
+              return `"improvedContent": "${sanitizedContent}"`;
+            }
+          );
+          parsedResult = JSON.parse(jsonString);
+        }
+
+        if (!parsedResult.improvedContent) {
+          throw new Error('Missing improvedContent in AI response');
+        }
+
+        return res.status(200).json({
+          improvedContent: parsedResult.improvedContent,
+          improvements: [
+            'Enhanced based on user instructions',
+            'Improved technical approach',
+            'Strengthened value proposition',
+            'Better alignment with requirements'
+          ],
+          insights: parsedResult.insights || [],
+          validation: validation.isValid ? 'passed' : 'warning'
+        });
+        
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        console.error('Raw response:', responseText);
+        
+        return res.status(200).json({
+          improvedContent: responseText,
+          improvements: [
+            'General improvements applied based on tender context'
+          ],
+          insights: [
+            {
+              change: "Content has been improved by AI",
+              explanation: "AI made general improvements, but response could not be fully parsed. Returning raw content."
+            }
+          ],
+          validation: 'fallback'
+        });
       }
-    );
-    parsedResult = JSON.parse(jsonString);
-  }
-
-  if (!parsedResult.improvedContent) {
-    throw new Error('Missing improvedContent in AI response');
-  }
-
-  return res.status(200).json({
-    improvedContent: parsedResult.improvedContent,
-    improvements: [
-      'Enhanced based on user instructions',
-      'Improved technical approach',
-      'Strengthened value proposition',
-      'Better alignment with requirements'
-    ],
-    insights: parsedResult.insights || [],
-    validation: validation.isValid ? 'passed' : 'warning'
-  });
-  
-} catch (parseError) {
-  console.error('Failed to parse AI response:', parseError);
-  console.error('Raw response:', responseText);
-  
-  return res.status(200).json({
-    improvedContent: responseText,
-    improvements: [
-      'General improvements applied based on tender context'
-    ],
-    insights: [
-      {
-        change: "Content has been improved by AI",
-        explanation: "AI made general improvements, but response could not be fully parsed. Returning raw content."
-      }
-    ],
-    validation: 'fallback'
-  });
-}
     } catch (aiError) {
       console.error('AI improvement error:', aiError);
       // Fall back to preserving original content with language detection
