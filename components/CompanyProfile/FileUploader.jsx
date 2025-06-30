@@ -4,21 +4,25 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  CloudArrowUpIcon, 
-  DocumentIcon, 
-  TrashIcon,
-  CheckCircleIcon 
-} from '@heroicons/react/24/outline';
+  Upload, 
+  FileText, 
+  Trash2,
+  CheckCircle,
+  AlertCircle
+} from 'lucide-react';
+import { Button } from '../ui/button';
 
 export default function FileUploader({ 
   acceptedTypes = ".pdf,.doc,.docx,.jpg,.png", 
-  maxSize = 10, // MB
+  maxSize = 5, // MB
   onFileUpload,
-  existingFiles = []
+  existingFiles = [],
+  disabled = false
 }) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [files, setFiles] = useState(existingFiles);
+  const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
 
   // Handle drag events
@@ -53,12 +57,24 @@ export default function FileUploader({
 
   // Process selected files
   const handleFiles = async (fileList) => {
+    setError(null);
     const newFiles = Array.from(fileList);
     
     for (const file of newFiles) {
       // Validate file size
       if (file.size > maxSize * 1024 * 1024) {
-        alert(`File ${file.name} is too large. Maximum size is ${maxSize}MB.`);
+        setError(`File ${file.name} is too large. Maximum size is ${maxSize}MB.`);
+        continue;
+      }
+      
+      // Validate file type
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      const acceptedExtensions = acceptedTypes.split(',').map(type => 
+        type.trim().replace('.', '')
+      );
+      
+      if (!acceptedExtensions.includes(fileExtension)) {
+        setError(`File ${file.name} is not an accepted file type. Please upload ${acceptedTypes}.`);
         continue;
       }
       
@@ -74,17 +90,19 @@ export default function FileUploader({
           size: file.size,
           type: file.type,
           uploadedAt: new Date().toISOString(),
-          status: 'uploaded'
+          status: 'uploaded',
+          file: file // Store the actual file object
         };
         
-        setFiles(prev => [...prev, newFile]);
+        const updatedFiles = [...files, newFile];
+        setFiles(updatedFiles);
         
         if (onFileUpload) {
           onFileUpload(newFile);
         }
       } catch (error) {
         console.error('Upload failed:', error);
-        alert(`Failed to upload ${file.name}`);
+        setError(`Failed to upload ${file.name}`);
       } finally {
         setUploading(false);
       }
@@ -93,7 +111,16 @@ export default function FileUploader({
 
   // Remove file
   const removeFile = (fileId) => {
-    setFiles(prev => prev.filter(file => file.id !== fileId));
+    const updatedFiles = files.filter(file => file.id !== fileId);
+    setFiles(updatedFiles);
+    
+    // Notify parent component
+    if (onFileUpload) {
+      const removedFile = files.find(file => file.id === fileId);
+      if (removedFile) {
+        onFileUpload(null, removedFile);
+      }
+    }
   };
 
   // Format file size
@@ -108,43 +135,53 @@ export default function FileUploader({
   return (
     <div className="space-y-4">
       {/* Upload Area */}
-      <div
-        className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-          dragActive 
-            ? 'border-primary bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
-        }`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept={acceptedTypes}
-          onChange={handleChange}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-        
-        <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-        <div className="mt-4">
-          <p className="text-sm text-gray-600">
-            <span className="font-medium text-primary">Click to upload</span> or drag and drop
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            PDF, DOC, DOCX, JPG, PNG up to {maxSize}MB
-          </p>
-        </div>
-        
-        {uploading && (
+      {!disabled && (
+        <div
+          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+            dragActive 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-gray-300 hover:border-gray-400'
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={acceptedTypes}
+            onChange={handleChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            disabled={disabled}
+          />
+          
+          <Upload className="mx-auto h-12 w-12 text-gray-400" />
           <div className="mt-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-            <p className="text-sm text-gray-600 mt-2">Uploading...</p>
+            <p className="text-sm text-gray-600">
+              <span className="font-medium text-blue-600">Click to upload</span> or drag and drop
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {acceptedTypes.replace(/\./g, '').toUpperCase()} up to {maxSize}MB
+            </p>
           </div>
-        )}
-      </div>
+          
+          {uploading && (
+            <div className="mt-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-sm text-gray-600 mt-2">Uploading...</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="mt-4 text-sm text-red-600 bg-red-50 p-2 rounded">
+              <AlertCircle className="inline-block w-4 h-4 mr-1" />
+              {error}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* File List */}
       {files.length > 0 && (
@@ -153,7 +190,7 @@ export default function FileUploader({
           {files.map((file) => (
             <div key={file.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
               <div className="flex items-center space-x-3">
-                <DocumentIcon className="h-5 w-5 text-gray-400" />
+                <FileText className="h-5 w-5 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">{file.name}</p>
                   <p className="text-xs text-gray-500">
@@ -162,13 +199,17 @@ export default function FileUploader({
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                <button
-                  onClick={() => removeFile(file.id)}
-                  className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                {!disabled && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFile(file.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
