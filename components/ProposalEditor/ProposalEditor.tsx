@@ -140,7 +140,7 @@ Thank you for considering our proposal. We are available for any clarifications 
 *This proposal is valid for 30 days from the date of submission.*
 *All work will be carried out in accordance with JKR specifications and local authority requirements.*`;
 
-export const ProposalEditor = (): JSX.Element => {
+export const ProposalEditor = () => {
   const router = useRouter();
   const { id: tenderId } = router.query;
   const [proposalContent, setProposalContent] = useState(mockProposalTemplate);
