@@ -1,6 +1,3 @@
-// pages/proposals/edit/[id].js
-// Enhanced proposal editor page with floating AI assistant bubble
-// Autosave disabled, version viewing enabled, AI chatbot integrated as floating bubble
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
@@ -15,12 +12,55 @@ import ToolbarSection from '../../../components/ProposalEditor/ToolbarSection';
 import ContentArea from '../../../components/ProposalEditor/ContentArea';
 import ExportControls from '../../../components/ProposalEditor/ExportControls';
 import FloatingAIAssistant from '../../../components/ProposalEditor/FloatingAIAssistant';
+import TranslationPanel from '../../../components/Translation/TranslationPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize } from 'lucide-react';
+import { ArrowLeft, Sparkles, History, Building2, Clock, Shield, AlertCircle, CheckCircle, Send, ExternalLink, FileText, Award, TrendingUp, Trophy, Clock as Blocks, Plus, RefreshCw, Maximize, Minimize, Languages, Lightbulb, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
+
+// Helper function to sanitize company experience text
+const sanitizeExperienceText = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  
+  // Remove common placeholder text patterns
+  const placeholderPatterns = [
+    /You can enter this information into the fields\s*\.?\s*/gi,
+    /\*\*Company Background:\*\*\s*/gi,
+    /\*\*Certifications:\*\*\s*/gi,
+    /\*\*Company Experience:\*\*\s*/gi,
+    /\*\*Experience:\*\*\s*/gi,
+    /Please complete your profile first\s*\.?\s*/gi,
+    /Enter your company information here\s*\.?\s*/gi,
+    /Add your company details\s*\.?\s*/gi,
+    /Complete your company profile\s*\.?\s*/gi,
+    // Remove duplicate company name patterns
+    /^([^.]+)\s+is\s+\1\s+/gi,
+    // Remove excessive whitespace and newlines
+    /\n\s*\n\s*\n/g,
+    /\s{3,}/g
+  ];
+  
+  let cleanedText = text;
+  
+  // Apply all sanitization patterns
+  placeholderPatterns.forEach(pattern => {
+    if (pattern.toString().includes('\\n')) {
+      cleanedText = cleanedText.replace(pattern, '\n\n');
+    } else {
+      cleanedText = cleanedText.replace(pattern, ' ');
+    }
+  });
+  
+  // Clean up extra whitespace and normalize
+  cleanedText = cleanedText
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Replace multiple newlines with double newline
+    .trim();
+  
+  return cleanedText;
+};
 
 export default function ProposalEditorPage() {
   const router = useRouter();
@@ -42,6 +82,14 @@ export default function ProposalEditorPage() {
   const [isGeneratingImprovement, setIsGeneratingImprovement] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  
+  // Translation state
+  const [showTranslationPanel, setShowTranslationPanel] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState('');
+
+  // AI Improvement Insights state
+  const [showImprovementInsights, setShowImprovementInsights] = useState(false);
+  const [aiInsights, setAiInsights] = useState([]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -80,8 +128,6 @@ export default function ProposalEditorPage() {
   );
 
   const loadProposal = async () => {
-    // Updated validation: Only check if ID exists, not if it's a valid number
-    // This allows UUID strings to pass validation
     if (!id) {
       setError('invalid_id');
       setLoading(false);
@@ -108,7 +154,6 @@ export default function ProposalEditorPage() {
       setCompanyProfile(profile);
     } catch (error) {
       console.error('Error loading company profile:', error);
-      // Don't show error for missing profile, just log it
     }
   };
 
@@ -117,7 +162,6 @@ export default function ProposalEditorPage() {
     try {
       setIsCreatingProposal(true);
       
-      // Get the first available tender
       const tenders = await api('/api/tenders');
       if (!tenders || tenders.length === 0) {
         addToast('No tenders available to create a proposal for', 'error');
@@ -126,13 +170,11 @@ export default function ProposalEditorPage() {
 
       const firstTender = tenders[0];
       
-      // Generate a proposal for the first tender
       const result = await api('/api/generateProposal', {
         method: 'POST',
         body: { tenderId: firstTender.id }
       });
 
-      // Redirect to the new proposal editor
       router.push(`/proposals/edit/${result.proposalId}`);
       addToast('New proposal created successfully!', 'success');
     } catch (error) {
@@ -149,7 +191,7 @@ export default function ProposalEditorPage() {
     loadProposal();
   };
 
-  // Manual save functionality (autosave disabled)
+  // Manual save functionality
   const saveContent = useCallback(async () => {
     if (!id || !user || !hasUnsavedChanges) return;
 
@@ -165,24 +207,12 @@ export default function ProposalEditorPage() {
       setLastSaved(new Date().toISOString());
       setHasUnsavedChanges(false);
       
-      // Refresh version history after saving
       mutateVersions();
     } catch (error) {
       setSaveStatus('error');
       console.error('Save failed:', error);
     }
   }, [id, content, user, hasUnsavedChanges, mutateVersions]);
-
-  // AUTOSAVE DISABLED: Commented out the autosave timer
-  // useEffect(() => {
-  //   if (!hasUnsavedChanges || !user) return;
-
-  //   const timer = setTimeout(() => {
-  //     saveContent();
-  //   }, 2000);
-
-  //   return () => clearTimeout(timer);
-  // }, [content, hasUnsavedChanges, saveContent, user]);
 
   // Handle content changes
   const handleContentChange = (newContent) => {
@@ -234,13 +264,27 @@ export default function ProposalEditorPage() {
     }, 0);
   };
 
+  // Handle translated content
+  const handleTranslatedContentChange = (newTranslatedContent) => {
+    setTranslatedContent(newTranslatedContent);
+  };
+
+  // Use translated content as main content
+  const useTranslatedContent = () => {
+    if (translatedContent) {
+      setContent(translatedContent);
+      setHasUnsavedChanges(true);
+      addToast('Translated content loaded into editor', 'success');
+    }
+  };
+
   // Manual save
   const handleManualSave = () => {
     saveContent();
     addToast('Proposal saved successfully!', 'success');
   };
 
-  // AI Improve functionality
+  // AI Improve functionality with insights (no translation needed)
   const handleImproveProposal = async () => {
     if (!proposal?.tenderId) {
       addToast('Unable to improve proposal - tender information missing', 'error');
@@ -258,7 +302,12 @@ export default function ProposalEditorPage() {
       });
       
       setContent(result.improvedContent);
+      
+      // AI insights are now in the correct language - no translation needed
+      setAiInsights(result.insights || []);
+      
       setHasUnsavedChanges(true);
+      setShowImprovementInsights(true);
       addToast('Proposal improved successfully!', 'success');
     } catch (error) {
       addToast('Failed to improve proposal', 'error');
@@ -285,19 +334,23 @@ export default function ProposalEditorPage() {
     }
   };
 
-  // Insert company information using database data
+  // Insert company information using database data with sanitization
   const insertCompanyInfo = (section) => {
     if (!companyProfile) {
       addToast('Company profile not loaded. Please complete your profile first.', 'error');
       return;
     }
 
+    // Sanitize the experience text before using it
+    const cleanExperience = sanitizeExperienceText(companyProfile.experience);
+    const companyName = companyProfile.name || 'Our Company';
+
     const companyInfo = {
-      background: `\n\n**Company Background:**\n${companyProfile.name} is ${companyProfile.experience || 'a professional company with extensive experience in our field'}.\n\n`,
+      background: `\n\n**Company Background:**\n${companyName} is ${cleanExperience || 'a professional company with extensive experience in our field'}.\n\n`,
       certifications: `\n\n**Certifications:**\n${companyProfile.certifications && companyProfile.certifications.length > 0 
         ? companyProfile.certifications.map(cert => `- ${cert}`).join('\n') 
         : '- Professional certifications available upon request'}\n\n`,
-      experience: `\n\n**Company Experience:**\n${companyProfile.experience || 'Our company brings extensive experience and proven capabilities to this project.'}\n\n`
+      experience: `\n\n**Company Experience:**\n${cleanExperience || 'Our company brings extensive experience and proven capabilities to this project.'}\n\n`
     };
 
     const insertion = companyInfo[section] || "";
@@ -333,12 +386,10 @@ export default function ProposalEditorPage() {
         e.preventDefault();
         handleManualSave();
       }
-      // F11 or Ctrl+Shift+F for full screen
       if (e.key === 'F11' || (e.ctrlKey && e.shiftKey && e.key === 'F')) {
         e.preventDefault();
         toggleFullScreen();
       }
-      // Escape to exit full screen
       if (e.key === 'Escape' && isFullScreen) {
         setIsFullScreen(false);
       }
@@ -452,16 +503,6 @@ export default function ProposalEditorPage() {
                 </div>
               </div>
               
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left max-w-md mx-auto">
-                <h4 className="text-sm font-medium text-amber-900 mb-2">Alternative: Create from tender</h4>
-                <ol className="text-sm text-amber-800 space-y-1 list-decimal list-inside">
-                  <li>Browse available tenders</li>
-                  <li>Click on a tender to view details</li>
-                  <li>Use the "Generate Proposal" button</li>
-                  <li>Edit your proposal in the editor</li>
-                </ol>
-              </div>
-              
               <div className="flex space-x-3 justify-center">
                 <button onClick={() => router.back()} className="btn btn-secondary">
                   Go Back
@@ -555,6 +596,15 @@ export default function ProposalEditorPage() {
                   <Button 
                     variant="outline" 
                     size="sm"
+                    onClick={() => setShowTranslationPanel(!showTranslationPanel)}
+                    className={showTranslationPanel ? 'bg-purple-50 text-purple-700' : ''}
+                  >
+                    <Languages className="w-4 h-4 mr-2" />
+                    Translate
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
                     onClick={toggleFullScreen}
                     title={isFullScreen ? 'Exit Full Screen (Esc)' : 'Full Screen (F11)'}
                   >
@@ -582,7 +632,284 @@ export default function ProposalEditorPage() {
               />
             </CardContent>
           </Card>
+
+          {/* AI Improvement Insights Panel */}
+          {showImprovementInsights && aiInsights.length > 0 && !isFullScreen && (
+            <Card className="mt-6 border-green-200 bg-green-50/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2 text-green-900">
+                    <Lightbulb className="w-5 h-5" />
+                    <span>AI Improvement Insights</span>
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowImprovementInsights(false)}
+                  >
+                    <EyeOff className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-green-700 mb-4">
+                    Here's what the AI improved in your proposal:
+                  </p>
+                  
+                  {aiInsights.map((insight, index) => (
+                    <div key={index} className="bg-white border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-green-700 text-xs font-bold">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-green-900 mb-2">
+                            {insight.change}
+                          </h4>
+                          <p className="text-sm text-green-800 leading-relaxed">
+                            {insight.explanation}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Translation Panel */}
+          {showTranslationPanel && !isFullScreen && (
+            <div className="mt-6">
+              <TranslationPanel
+                originalContent={content}
+                onTranslatedContentChange={handleTranslatedContentChange}
+                originalLanguage="en"
+              />
+              {translatedContent && (
+                <div className="mt-4 flex justify-end">
+                  <Button 
+                    onClick={useTranslatedContent}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    Use Translated Content
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+
+        {/* Sidebar - hidden in full screen */}
+        {!isFullScreen && (
+          <div className="space-y-6">
+            {/* Quick Insert */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building2 className="w-5 h-5" />
+                  <span>Quick Insert</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => insertCompanyInfo('background')}
+                  disabled={isSubmitted || !companyProfile}
+                >
+                  Company Background
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => insertCompanyInfo('certifications')}
+                  disabled={isSubmitted || !companyProfile}
+                >
+                  Certifications
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => insertCompanyInfo('experience')}
+                  disabled={isSubmitted || !companyProfile}
+                >
+                  Past Experience
+                </Button>
+                {!companyProfile && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Complete your company profile to enable quick insert
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* AI Insights Toggle */}
+            {aiInsights.length > 0 && (
+              <Card className="border-green-200 bg-green-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-green-900">
+                    <Lightbulb className="w-5 h-5" />
+                    <span>AI Insights</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-green-700 mb-3">
+                    {aiInsights.length} improvement{aiInsights.length !== 1 ? 's' : ''} made to your proposal
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-green-300 text-green-700 hover:bg-green-50"
+                    onClick={() => setShowImprovementInsights(!showImprovementInsights)}
+                  >
+                    {showImprovementInsights ? (
+                      <>
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Hide Insights
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Insights
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Version History */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <History className="w-5 h-5" />
+                  <span>Version History</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {versions && versions.length > 0 ? (
+                    versions.slice(0, 5).map((version) => (
+                      <div key={version.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
+                        <div>
+                          <p className="text-sm font-medium">Version {version.version}</p>
+                          <p className="text-xs text-gray-500">{format(new Date(version.createdAt), "MMM d, HH:mm")}</p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewVersion(version)}
+                          disabled={isSubmitted}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500">No versions yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Versions are created when you save drafts</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Submit Proposal */}
+            <Card className="border-green-200 bg-green-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-green-900">
+                  <Shield className="w-5 h-5" />
+                  <span>Submit Proposal</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-2 text-sm">
+                    <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
+                    <p className="text-gray-700">
+                      Submitting will record your proposal on the Algorand blockchain and lock further edits.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Proposal content ready</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Company profile complete</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>All requirements met</span>
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    onClick={handleSubmitProposal}
+                    disabled={isSubmitting || isSubmitted || !content.trim()}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Submitting to Blockchain...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit Proposal
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tender Reference */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Tender Reference</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {tender ? (
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Budget:</span>
+                      <p className="font-semibold">{tender.budget || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Closing:</span>
+                      <p className="font-semibold">{tender.closingDate ? format(new Date(tender.closingDate), "MMM d, yyyy") : 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Category:</span>
+                      <p className="font-semibold">{tender.category}</p>
+                    </div>
+                    <Link href={`/tenders/${tender.id}`} className="block mt-3">
+                      <Button variant="outline" size="sm" className="w-full">
+                        View Full Tender
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">Loading tender details...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+ 
       </div>
 
       {/* Floating AI Assistant - Only visible when not in full screen and not submitted */}

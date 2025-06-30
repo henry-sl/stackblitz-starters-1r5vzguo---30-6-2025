@@ -1,11 +1,53 @@
 // components/ProfileForm.jsx
 // This component provides a form for viewing and updating the company profile
 // It fetches the current profile data and allows the user to edit and save changes
-// Enhanced with client-side validation and better error handling
+// Enhanced with client-side validation, better error handling, and data sanitization
 
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { useToast } from '../hooks/useToast';
+
+// Helper function to sanitize experience text
+const sanitizeExperienceText = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  
+  // Remove common placeholder text patterns
+  const placeholderPatterns = [
+    /You can enter this information into the fields\s*\.?\s*/gi,
+    /\*\*Company Background:\*\*\s*/gi,
+    /\*\*Certifications:\*\*\s*/gi,
+    /\*\*Company Experience:\*\*\s*/gi,
+    /\*\*Experience:\*\*\s*/gi,
+    /Please complete your profile first\s*\.?\s*/gi,
+    /Enter your company information here\s*\.?\s*/gi,
+    /Add your company details\s*\.?\s*/gi,
+    /Complete your company profile\s*\.?\s*/gi,
+    // Remove duplicate company name patterns
+    /^([^.]+)\s+is\s+\1\s+/gi,
+    // Remove excessive whitespace and newlines
+    /\n\s*\n\s*\n/g,
+    /\s{3,}/g
+  ];
+  
+  let cleanedText = text;
+  
+  // Apply all sanitization patterns
+  placeholderPatterns.forEach(pattern => {
+    if (pattern.toString().includes('\\n')) {
+      cleanedText = cleanedText.replace(pattern, '\n\n');
+    } else {
+      cleanedText = cleanedText.replace(pattern, ' ');
+    }
+  });
+  
+  // Clean up extra whitespace and normalize
+  cleanedText = cleanedText
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Replace multiple newlines with double newline
+    .trim();
+  
+  return cleanedText;
+};
 
 export default function ProfileForm() {
   const { addToast } = useToast();
@@ -40,7 +82,7 @@ export default function ProfileForm() {
         name: data.name || '',
         registrationNumber: data.registrationNumber || '',
         certifications: data.certifications?.join(', ') || '',
-        experience: data.experience || '',
+        experience: sanitizeExperienceText(data.experience) || '', // Sanitize on load
         contactEmail: data.contactEmail || '',
         contactPhone: data.contactPhone || '',
         address: data.address || ''
@@ -107,6 +149,8 @@ export default function ProfileForm() {
       
       const updateData = {
         ...formData,
+        // Sanitize experience text before sending
+        experience: sanitizeExperienceText(formData.experience),
         // Convert comma-separated certifications string to array
         certifications: formData.certifications 
           ? formData.certifications.split(',').map(c => c.trim()).filter(Boolean)
@@ -147,9 +191,13 @@ export default function ProfileForm() {
   // Handle input field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Sanitize experience field in real-time
+    const sanitizedValue = name === 'experience' ? sanitizeExperienceText(value) : value;
+    
     setFormData({
       ...formData,
-      [name]: value
+      [name]: sanitizedValue
     });
     
     // Clear validation error for this field when user starts typing
@@ -337,6 +385,9 @@ export default function ProfileForm() {
             placeholder="Describe your company's experience, key projects, capabilities, and expertise..."
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
           />
+          <p className="mt-1 text-sm text-gray-500">
+            This information will be used for Quick Insert in proposals
+          </p>
         </div>
 
         {/* Submit Button */}

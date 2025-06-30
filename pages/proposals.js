@@ -1,12 +1,16 @@
 // pages/proposals.js
 // Proposals listing page using Supabase data with SWR
+// Added delete functionality for draft proposals with confirmation modal
+// Enhanced with graceful error handling for network issues
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { fetcher } from '../lib/api';
+import { fetcher, api } from '../lib/api';
+import { useToast } from '../hooks/useToast';
+import Modal from '../components/Modal';
 import { 
   DocumentTextIcon,
   PencilSquareIcon,
@@ -14,12 +18,19 @@ import {
   ClockIcon,
   CheckCircleIcon,
   PlusIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 
 export default function ProposalsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { addToast } = useToast();
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [proposalToDelete, setProposalToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -29,10 +40,69 @@ export default function ProposalsPage() {
   }, [user, authLoading, router]);
 
   // Fetch proposals using SWR
-  const { data: proposals, error, isLoading } = useSWR(
+  const { data: proposals, error, isLoading, mutate } = useSWR(
     user ? '/api/proposals' : null,
     fetcher
   );
+
+  // Handle delete button click
+  const handleDeleteClick = (proposal) => {
+    setProposalToDelete(proposal);
+    setShowDeleteModal(true);
+  };
+
+  // Handle delete confirmation
+  const handleConfirmDelete = async () => {
+    if (!proposalToDelete) return;
+
+    // Close modal and clear state IMMEDIATELY to prevent UI issues
+    setShowDeleteModal(false);
+    setProposalToDelete(null);
+
+    try {
+      setIsDeleting(true);
+      
+      await api(`/api/proposals/${proposalToDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      addToast('Proposal deleted successfully!', 'success');
+    } catch (error) {
+      // Changed from console.error to console.warn to prevent full-page error overlay
+      console.warn('Error deleting proposal:', error);
+      
+      // Enhanced error handling for different types of errors
+      if (error.message.includes('Network error') || 
+          error.message.includes('fetch failed') ||
+          error.message.includes('Unable to connect')) {
+        // For network errors, assume the deletion might have succeeded
+        // since the backend often completes the operation before the network issue occurs
+        addToast('Network issue detected. Proposal may have been deleted. Refreshing list...', 'info');
+      } else if (error.message.includes('Proposal not found') || error.message.includes('404')) {
+        // If proposal is not found, it was likely already deleted
+        addToast('Proposal was already deleted', 'info');
+      } else if (error.message.includes('Access denied') || error.message.includes('403')) {
+        addToast('Access denied: You do not have permission to delete this proposal', 'error');
+      } else if (error.message.includes('Only draft proposals can be deleted')) {
+        addToast('Only draft proposals can be deleted', 'error');
+      } else {
+        // For any other errors, show a generic error message
+        addToast('Failed to delete proposal', 'error');
+      }
+    } finally {
+      // Reset loading state and refresh data
+      setIsDeleting(false);
+      // Always refresh the proposals list to sync with database state
+      // This will show the actual current state regardless of any network issues
+      mutate();
+    }
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setProposalToDelete(null);
+  };
 
   // Get status badge styling
   const getStatusBadge = (status) => {
@@ -117,6 +187,7 @@ export default function ProposalsPage() {
           {proposals.map((proposal) => {
             const statusBadge = getStatusBadge(proposal.status);
             const StatusIcon = statusBadge.icon;
+            const isDraft = proposal.status === 'draft';
 
             return (
               <div key={proposal.id} className="card hover:shadow-md transition-shadow">
@@ -152,13 +223,22 @@ export default function ProposalsPage() {
                     
                     {/* Actions */}
                     <div className="flex space-x-2">
-                      {proposal.status === 'draft' ? (
-                        <Link href={`/proposals/edit/${proposal.id}`}>
-                          <button className="btn btn-primary text-sm">
-                            <PencilSquareIcon className="h-4 w-4 mr-1" />
-                            Edit
+                      {isDraft ? (
+                        <>
+                          <Link href={`/proposals/edit/${proposal.id}`}>
+                            <button className="btn btn-primary text-sm">
+                              <PencilSquareIcon className="h-4 w-4 mr-1" />
+                              Edit
+                            </button>
+                          </Link>
+                          <button 
+                            onClick={() => handleDeleteClick(proposal)}
+                            className="btn text-sm bg-red-600 text-white hover:bg-red-700"
+                          >
+                            <TrashIcon className="h-4 w-4 mr-1" />
+                            Delete
                           </button>
-                        </Link>
+                        </>
                       ) : (
                         <Link href={`/proposals/edit/${proposal.id}`}>
                           <button className="btn btn-secondary text-sm">
@@ -220,6 +300,54 @@ export default function ProposalsPage() {
           </Link>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={handleCancelDelete}
+        title="Delete Proposal"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center p-4 bg-red-50 rounded-lg">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-600 mr-3 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-red-800">
+                Are you sure you want to delete this proposal?
+              </p>
+              <p className="text-sm text-red-700 mt-1">
+                This action cannot be undone. The proposal "{proposalToDelete?.tenderTitle || proposalToDelete?.tenders?.title}" will be permanently deleted.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={handleCancelDelete}
+              disabled={isDeleting}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <TrashIcon className="h-4 w-4 mr-2" />
+                  Really Delete
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

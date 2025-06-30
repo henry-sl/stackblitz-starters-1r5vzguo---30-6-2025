@@ -1,11 +1,13 @@
 // components/TenderCard.jsx
 // This component renders a card for a single tender in the tenders list
 // It displays key information about the tender and links to the detailed view
+// Updated with eligibility scoring display
 
 import Link from 'next/link';
-import { CalendarIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, BuildingOfficeIcon, CheckCircleIcon, XCircleIcon, ShieldIcon } from '@heroicons/react/24/outline';
+import { Badge } from './ui/badge';
 
-export default function TenderCard({ tender }) {
+export default function TenderCard({ tender, eligibilitySummary }) {
   const { id, title, agency, closingDate, category, isNew } = tender;
   
   // Calculate days until closing date
@@ -15,6 +17,46 @@ export default function TenderCard({ tender }) {
   
   // Determine if the tender is closing soon (within 7 days)
   const isClosingSoon = daysUntilClosing <= 7 && daysUntilClosing > 0;
+
+  // Get eligibility badge styling
+  const getEligibilityBadge = () => {
+    if (!eligibilitySummary) return null;
+    
+    const { status, score, message } = eligibilitySummary;
+    
+    switch (status) {
+      case 'high_match':
+        return (
+          <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
+            <CheckCircleIcon className="h-3 w-3" />
+            <span>{score}% Match</span>
+          </Badge>
+        );
+      case 'medium_match':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 flex items-center space-x-1">
+            <ShieldIcon className="h-3 w-3" />
+            <span>{score}% Match</span>
+          </Badge>
+        );
+      case 'low_match':
+        return (
+          <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
+            <XCircleIcon className="h-3 w-3" />
+            <span>{score}% Match</span>
+          </Badge>
+        );
+      case 'incomplete_profile':
+        return (
+          <Badge className="bg-blue-100 text-blue-800 flex items-center space-x-1">
+            <ShieldIcon className="h-3 w-3" />
+            <span>Complete Profile</span>
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <Link href={`/tenders/${id}`}>
@@ -39,6 +81,8 @@ export default function TenderCard({ tender }) {
                 Closing Soon
               </span>
             )}
+            {/* Eligibility badge */}
+            {getEligibilityBadge()}
           </div>
         </div>
         
