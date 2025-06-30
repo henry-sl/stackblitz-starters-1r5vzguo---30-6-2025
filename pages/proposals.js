@@ -68,7 +68,8 @@ export default function ProposalsPage() {
 
       addToast('Proposal deleted successfully!', 'success');
     } catch (error) {
-      console.error('Error deleting proposal:', error);
+      // Changed from console.error to console.warn to prevent full-page error overlay
+      console.warn('Error deleting proposal:', error);
       
       // Enhanced error handling for different types of errors
       if (error.message.includes('Network error') || 
