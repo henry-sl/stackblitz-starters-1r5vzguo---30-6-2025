@@ -27,31 +27,31 @@ export default function TenderCard({ tender, eligibilitySummary }) {
     switch (status) {
       case 'high_match':
         return (
-          <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
+          <UIBdage className="bg-green-100 text-green-800 flex items-center space-x-1">
             <CheckCircleIcon className="h-3 w-3" />
             <span>{score}% Match</span>
-          </Badge>
+          </UIBdage>
         );
       case 'medium_match':
         return (
-          <Badge className="bg-yellow-100 text-yellow-800 flex items-center space-x-1">
+          <UIBdage className="bg-yellow-100 text-yellow-800 flex items-center space-x-1">
             <ShieldIcon className="h-3 w-3" />
             <span>{score}% Match</span>
-          </Badge>
+          </UIBdage>
         );
       case 'low_match':
         return (
-          <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
+          <UIBdage className="bg-orange-100 text-orange-800 flex items-center space-x-1">
             <XCircleIcon className="h-3 w-3" />
             <span>{score}% Match</span>
-          </Badge>
+          </UIBdage>
         );
       case 'incomplete_profile':
         return (
-          <Badge className="bg-blue-100 text-blue-800 flex items-center space-x-1">
+          <UIBdage className="bg-blue-100 text-blue-800 flex items-center space-x-1">
             <ShieldIcon className="h-3 w-3" />
             <span>Complete Profile</span>
-          </Badge>
+          </UIBdage>
         );
       default:
         return null;
