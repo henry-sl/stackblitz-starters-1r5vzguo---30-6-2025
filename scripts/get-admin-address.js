@@ -12,12 +12,17 @@ function getAdminWalletAddress() {
 
   try {
     const account = algosdk.mnemonicToSecretKey(mnemonic);
+    
+    // Ensure the address is a string. It should already be, but this handles unexpected types.
+    const address = String(account.addr);
+
     console.log('Your Admin Wallet Address:');
-    console.log(account.addr);
+    console.log(address);
   } catch (error) {
-    console.error('Error deriving address from mnemonic. Please check if your ADMIN_WALLET_MNEMONIC is valid.');
-    console.error(error.message);
+    console.error('Error deriving address from mnemonic. Please check if your ADMIN_WALLET_MNEMONIC is valid and correctly formatted (25 words, space-separated).');
+    console.error('Details:', error.message);
   }
 }
 
 getAdminWalletAddress();
+
