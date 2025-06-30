@@ -20,6 +20,14 @@ export default function Signup() {
     }
   }, [user, router]);
 
+  // Get the redirect URL safely (works on both client and server)
+  const getRedirectUrl = () => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/tenders`;
+    }
+    return '/tenders';
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -38,23 +46,25 @@ export default function Signup() {
         
         {/* Supabase Auth UI - configured for signup view */}
         <div className="bg-white py-8 px-6 shadow rounded-lg">
-          <Auth
-            supabaseClient={supabase}
-            view="sign_up" // Show signup form instead of login
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: '#2563eb',
-                    brandAccent: '#1d4ed8',
+          {typeof window !== 'undefined' && (
+            <Auth
+              supabaseClient={supabase}
+              view="sign_up" // Show signup form instead of login
+              appearance={{
+                theme: ThemeSupa,
+                variables: {
+                  default: {
+                    colors: {
+                      brand: '#2563eb',
+                      brandAccent: '#1d4ed8',
+                    },
                   },
                 },
-              },
-            }}
-            providers={[]} // No social login providers
-            redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/tenders` : '/tenders'} // Safe redirect handling
-          />
+              }}
+              providers={[]} // No social login providers
+              redirectTo={getRedirectUrl()} // Redirect after successful signup
+            />
+          )}
         </div>
       </div>
     </div>
