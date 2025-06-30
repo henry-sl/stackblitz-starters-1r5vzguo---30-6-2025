@@ -84,7 +84,7 @@ const ContentArea = forwardRef(function ContentArea({
           } ${
             isFullScreen 
               ? 'h-full min-h-full' 
-              : 'min-h-[500px] max-h-[800px]'
+              : 'min-h-[75vh] max-h-[800px]'
           }`}
           style={{ 
             fontSize: '16px',

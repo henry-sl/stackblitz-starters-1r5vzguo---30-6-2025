@@ -32,6 +32,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import AIAssistant from '../../components/AIAssistant/AIAssistant'; // Import the new component
 
 export default function TenderDetails() {
   const router = useRouter();
@@ -411,6 +412,9 @@ export default function TenderDetails() {
               )}
             </CardContent>
           </Card>
+
+          {/* AI Assistant Component */}
+          <AIAssistant tenderId={id} />
 
           {/* Tender Details Tabs */}
           <Card>

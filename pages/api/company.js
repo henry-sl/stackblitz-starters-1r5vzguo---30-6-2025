@@ -59,13 +59,16 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No authorization token provided' });
     }
 
-    // Validate environment variables
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      console.error('[Company API] Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+    // Validate environment variables - check both client and server-side variables
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl) {
+      console.error('[Company API] Missing SUPABASE_URL environment variable');
       return res.status(500).json({ error: 'Server configuration error: Missing Supabase URL' });
     }
 
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (!serviceRoleKey) {
       console.error('[Company API] Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
       return res.status(500).json({ error: 'Server configuration error: Missing service role key' });
     }
@@ -73,10 +76,7 @@ export default async function handler(req, res) {
     console.log('[Company API] Creating Supabase service role client');
     
     // Create a Supabase client with service role key for server-side operations
-    const supabaseServiceRole = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
 
     console.log('[Company API] Verifying JWT token');
     

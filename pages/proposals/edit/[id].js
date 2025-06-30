@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -10,6 +11,7 @@ import AutosaveIndicator from '../../../components/ProposalEditor/AutosaveIndica
 import ToolbarSection from '../../../components/ProposalEditor/ToolbarSection';
 import ContentArea from '../../../components/ProposalEditor/ContentArea';
 import ExportControls from '../../../components/ProposalEditor/ExportControls';
+import FloatingAIAssistant from '../../../components/ProposalEditor/FloatingAIAssistant';
 import TranslationPanel from '../../../components/Translation/TranslationPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -566,8 +568,8 @@ export default function ProposalEditorPage() {
           ? 'grid grid-cols-1 gap-0 h-full' 
           : 'grid grid-cols-1 lg:grid-cols-4 gap-8'
       }`}>
-        {/* Main Editor */}
-        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-3'}>
+        {/* Main Editor - Now takes full width */}
+        <div className={isFullScreen ? 'col-span-1 h-full' : 'lg:col-span-4'}>
           <Card className={`${
             isFullScreen 
               ? 'h-full border-0 shadow-none rounded-none' 
@@ -698,6 +700,7 @@ export default function ProposalEditorPage() {
             </div>
           )}
         </div>
+
 
         {/* Sidebar - hidden in full screen */}
         {!isFullScreen && (
@@ -906,7 +909,18 @@ export default function ProposalEditorPage() {
             </Card>
           </div>
         )}
+ 
       </div>
+
+      {/* Floating AI Assistant - Only visible when not in full screen and not submitted */}
+      {!isFullScreen && !isSubmitted && (
+        <FloatingAIAssistant
+          tenderId={tender?.id}
+          proposalId={proposal?.id}
+          currentProposalContent={content}
+          onUpdateProposalContent={handleContentChange}
+        />
+      )}
     </div>
   );
 }

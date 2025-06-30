@@ -5,7 +5,7 @@
 
 import Link from 'next/link';
 import { CalendarIcon, BuildingOfficeIcon, CheckCircleIcon, XCircleIcon, ShieldIcon } from '@heroicons/react/24/outline';
-import { Badge } from './ui/badge';
+import { Badge as UIBdage } from './ui/badge';
 
 export default function TenderCard({ tender, eligibilitySummary }) {
   const { id, title, agency, closingDate, category, isNew } = tender;

@@ -11,17 +11,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Validate environment variables
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // Validate environment variables - check both client and server-side variables
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceRoleKey) {
       console.error('[Tenders API] Missing Supabase environment variables');
+      console.error('[Tenders API] SUPABASE_URL:', !!supabaseUrl);
+      console.error('[Tenders API] SUPABASE_SERVICE_ROLE_KEY:', !!serviceRoleKey);
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
     // Create Supabase client with service role key
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Get all active tenders
     const tenders = await tenderOperations.getAll(supabase);
