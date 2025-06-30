@@ -24,16 +24,14 @@ export default function ReputationPage() {
   // Fetch attestations data from the API using SWR
   const { data: attestations, error, isLoading } = useSWR('/api/attestations', fetcher);
 
-  const getAlgorandExplorerUrl = (transactionId) => {
-    return `https://testnet.algoexplorer.io/tx/${transactionId}`;
-  };
-
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'confirmed':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Confirmed</Badge>;
+      case 'verified':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Verified On-chain</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending Verification</Badge>;
+      case 'confirmed':
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Confirmed</Badge>;
       default:
         return <Badge variant="secondary">Unknown</Badge>;
     }
@@ -198,58 +196,74 @@ export default function ReputationPage() {
               ))}
             </div>
           ) : attestations && attestations.length > 0 ? (
-            <div className="space-y-4">
-              {attestations.map((attestation) => (
-                <div key={attestation.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-2">
-                        {attestation.tenderTitle}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                        <div>
-                          <span className="font-medium">Agency:</span>
-                          <p>{attestation.agency}</p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tender
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Submitted
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Transaction
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {attestations.map((attestation) => (
+                    <tr key={attestation.id} className="hover:bg-gray-50">
+                      {/* Tender information */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {attestation.tenderTitle}
                         </div>
-                        <div>
-                          <span className="font-medium">Submitted:</span>
-                          <p>{new Date(attestation.submittedAt).toLocaleDateString()}</p>
+                        <div className="text-sm text-gray-500">
+                          {attestation.agency}
                         </div>
-                        <div>
-                          <span className="font-medium">Status:</span>
-                          <p>{getStatusBadge(attestation.status)}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Transaction:</span>
-                          <p className="font-mono text-xs">{attestation.txId.substring(0, 8)}...{attestation.txId.substring(-8)}</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-gray-700">Status:</span>
-                          {getStatusBadge(attestation.status)}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-gray-700">Transaction ID:</span>
-                          <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                            {attestation.txId}
-                          </code>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="ml-4 flex flex-col space-y-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(getAlgorandExplorerUrl(attestation.txId), '_blank')}
-                      >
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        View Proof
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      {/* Submission date */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(attestation.submittedAt).toLocaleDateString()}
+                      </td>
+                      {/* Status badge */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          attestation.status === 'verified' 
+                            ? 'bg-green-100 text-green-800' 
+                            : attestation.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {attestation.status === 'verified' 
+                            ? 'Verified On-chain' 
+                            : attestation.status === 'pending'
+                            ? 'Pending Verification'
+                            : 'On-chain'}
+                        </span>
+                      </td>
+                      {/* Blockchain transaction link */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <a
+                          href={attestation.explorerUrl || `https://testnet.algoexplorer.io/tx/${attestation.txId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center text-primary hover:text-blue-700"
+                        >
+                          <span className="font-mono text-xs">
+                            {attestation.txId.substring(0, 8)}...{attestation.txId.substring(attestation.txId.length - 8)}
+                          </span>
+                          <ExternalLink className="h-3 w-3 ml-1" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             // Empty State

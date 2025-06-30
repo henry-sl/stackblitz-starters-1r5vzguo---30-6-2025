@@ -44,12 +44,12 @@ export default async function handler(req, res) {
     
     // Transform data to match frontend expectations (snake_case to camelCase)
     const transformedAttestations = await Promise.all(attestations.map(async (attestation) => {
-      // Verify transaction on blockchain if status is 'confirmed'
+      // Verify transaction on blockchain for both confirmed and pending statuses
       let verificationStatus = attestation.status;
       let explorerUrl = '';
       
       try {
-        if (attestation.status === 'confirmed') {
+        if (attestation.status === 'confirmed' || attestation.status === 'pending') {
           // Try to verify the transaction on the blockchain
           const isVerified = await verifyAttestationTransaction(attestation.tx_id);
           verificationStatus = isVerified ? 'verified' : 'pending';
